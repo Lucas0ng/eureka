@@ -125,9 +125,12 @@ li.done .chk{background:var(--mute)}
   <div class="row">
     <button class="b-now" id="fStart">开始</button>
     <button id="fDone">✅ 做完了</button>
+    <button class="b-long" id="fBreak" style="display:none">☕ 休息 5 分钟</button>
+    <button class="b-now" id="fCont" style="display:none">继续这件</button>
+    <button class="b-long" id="fSwap" style="display:none">换一件</button>
     <button id="fExit">先放下</button>
   </div>
-  <div class="hint">专心做这一件，小苗会慢慢长成树。中途离开这个页面，小树会枯掉哦。想到别的事？先放下，回头再记。</div>
+  <div class="hint" id="fHint">专心做这一件，小苗会慢慢长成树。中途离开这个页面，小树会枯掉哦。想到别的事？先放下，回头再记。</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -220,29 +223,39 @@ $('list').onclick=e=>{
 $('pickShuffle').onclick=()=>{choose();render()};
 $('pickFocus').onclick=()=>pickId&&startFocus(pickId);
 function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
-let len=25,endAt=0;
+let len=25,endAt=0,mode='focus';
+const HINT='专心做这一件，小苗会慢慢长成树。中途离开这个页面，小树会枯掉哦。想到别的事？先放下，回头再记。';
+function ui(m){mode=m;const show=(id,v)=>$(id).style.display=v?'':'none';
+  show('fStart',m==='focus'||m==='break');show('fDone',m!=='break');show('fBreak',m==='done');show('fCont',m==='ask');show('fSwap',m==='ask');
+  $('lens').style.display=m==='focus'?'':'none';$('fHint').textContent=m==='break'?'起来走走、喝口水、看看远处。休息时离开页面没关系。':m==='ask'?'休息好了！接着做这件，还是换一件？':m==='done'?'这一轮完成啦，先休息一下吧。':HINT}
 const PL=['🌱','🌿','🪴','🌳'];
 function plant(){const f=1-left/(len*60);$('plant').textContent=PL[Math.min(3,Math.floor(f*4))];}
 function stopTick(){clearInterval(tick);tick=null}
 function startFocus(id){focusId=id;stopTick();left=len*60;
   $('fText').textContent=items.find(i=>i.id===id).text;$('timer').textContent=fmt(left);$('plant').textContent='🌱';
-  $('lens').style.display='';$('fStart').textContent='开始';$('focus').classList.add('show')}
+  $('fStart').textContent='开始';ui('focus');$('focus').classList.add('show')}
 function endFocus(){stopTick();$('focus').classList.remove('show');render()}
-document.querySelectorAll('.chip[data-l]').forEach(c=>c.onclick=()=>{if(tick)return;len=+c.dataset.l;left=len*60;
+document.querySelectorAll('.chip[data-l]').forEach(c=>c.onclick=()=>{if(tick||mode!=='focus')return;len=+c.dataset.l;left=len*60;
   $('timer').textContent=fmt(left);document.querySelectorAll('.chip[data-l]').forEach(x=>x.classList.toggle('on',x===c))});
-function step(){left=Math.round((endAt-Date.now())/1000);$('timer').textContent=fmt(Math.max(left,0));plant();
+function step(){left=Math.round((endAt-Date.now())/1000);$('timer').textContent=fmt(Math.max(left,0));
+  if(mode==='break'){if(left<=0){stopTick();ui('ask');$('plant').textContent='💪';$('timer').textContent='00:00';if(navigator.vibrate)navigator.vibrate([200,100,200]);toast('休息结束 💪')}return}
+  plant();
   if(left<=0){stopTick();st.focus++;st.pts+=len>=25?15:len>=15?10:5;saveS();$('plant').textContent='🌳';
-    $('fStart').textContent='再来一轮';left=len*60;$('lens').style.display='';confetti();
+    left=len*60;ui('done');confetti();
     if(navigator.vibrate)navigator.vibrate([300,150,300]);toast('专注完成，种下一棵树 🌳 +'+(len>=25?15:len>=15?10:5)+' 分');renderStats()}}
 $('fStart').onclick=()=>{
   if(tick){stopTick();$('fStart').textContent='继续';return}
-  $('fStart').textContent='暂停';$('lens').style.display='none';endAt=Date.now()+left*1000;tick=setInterval(step,500);
+  $('fStart').textContent='暂停';$('lens').style.display='none';$('fDone').style.display=mode==='break'?'none':'';endAt=Date.now()+left*1000;tick=setInterval(step,500);
 };
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&tick){stopTick();st.wilt=(st.wilt||0)+1;saveS();
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&tick&&mode==='focus'){stopTick();st.wilt=(st.wilt||0)+1;saveS();
   left=len*60;$('timer').textContent=fmt(left);$('plant').textContent='🥀';$('fStart').textContent='重新开始';$('lens').style.display='';
   setTimeout(()=>toast('刚才离开了，小树枯了 🥀 没关系，再来一次'),300)}});
 $('fDone').onclick=()=>{const it=items.find(i=>i.id===focusId);if(it&&!it.done){it.done=true;award(it.cat==='long'?30:10,'');confetti()}save();endFocus();setTimeout(()=>toast('太棒了，划掉一件 ✅'),1700)};
 $('fExit').onclick=endFocus;
+$('fBreak').onclick=()=>{ui('break');left=5*60;$('plant').textContent='☕';$('timer').textContent=fmt(left);$('fStart').textContent='暂停';
+  endAt=Date.now()+left*1000;stopTick();tick=setInterval(step,500);};
+$('fCont').onclick=()=>startFocus(focusId);
+$('fSwap').onclick=()=>{pickId=focusId;choose();render();if(pickId&&pickId!==focusId)startFocus(pickId);else{endFocus();toast('没有别的事了，去记一件吧')}};
 $('exp').onclick=()=>{const b=new Blob([JSON.stringify({items,st})],{type:'application/json'});const a=document.createElement('a');
   a.href=URL.createObjectURL(b);a.download='eureka-backup-'+dkey()+'.json';a.click()};
 $('imp').onclick=()=>$('impF').click();
