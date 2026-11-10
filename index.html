@@ -27,13 +27,14 @@ button{border:0;border-radius:12px;padding:10px 14px;font-size:15px;font-weight:
 textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:16px;background:transparent;color:var(--ink);resize:none;font-family:inherit}
 .add .row{margin-top:10px}.add .row button{flex:1}
 .tabs{display:flex;margin:4px 14px 0;gap:8px}
-.tab{flex:1;background:var(--card);color:var(--mute)}
+.tab{flex:1;white-space:nowrap;font-size:14px;padding-left:4px;padding-right:4px;background:var(--card);color:var(--mute)}
+.tab.on.hist{background:#16a34a;color:#fff}.day{margin:14px 4px 6px;font-size:13px;color:var(--mute);font-weight:600}
 .tab.on.now{background:var(--now);color:#fff}.tab.on.long{background:var(--long);color:#fff}
 ul{list-style:none;margin:0;padding:0}
 li{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line)}
 li:last-child{border-bottom:0}
 li .t{flex:1;word-break:break-word}
-li.done .t{text-decoration:line-through;color:var(--mute)}
+li.done .t{text-decoration:line-through;color:var(--mute)}li.done .tag{display:inline-block;text-decoration:none}
 .chk{width:24px;height:24px;border-radius:50%;border:2px solid var(--mute);flex:none;padding:0;background:transparent}
 li.done .chk{background:var(--mute)}
 .mini{padding:6px 9px;font-size:13px;font-weight:500}
@@ -113,6 +114,7 @@ li.done .chk{background:var(--mute)}
 <div class="tabs">
   <button class="tab now on" data-tab="now">⚡ 立刻去做 <span id="cNow"></span></button>
   <button class="tab long" data-tab="long">🌱 长期想做 <span id="cLong"></span></button>
+  <button class="tab hist" data-tab="hist">✅ 已完成 <span id="cHist"></span></button>
 </div>
 <div class="card"><ul id="list"></ul></div>
 
@@ -188,7 +190,16 @@ function render(){renderStats();
   $('cNow').textContent=open('now').length||'';
   $('cLong').textContent=open('long').length||'';
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
-  const list=items.filter(i=>i.cat===tab).sort((a,b)=>a.done-b.done||b.t-a.t);
+  const dn=items.filter(i=>i.done);$('cHist').textContent=dn.length||'';
+  if(tab==='hist'){const pad=n=>String(n).padStart(2,'0'),dk=d=>{const x=new Date(d);return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate())};
+    const td=dk(Date.now()),yd=dk(Date.now()-864e5);let last='',h='';
+    dn.sort((a,b)=>(b.dt||0)-(a.dt||0)).forEach(i=>{const d=i.dt||0,k=i.dt?dk(d):'old';
+      if(k!==last){last=k;const c=dn.filter(j=>(j.dt?dk(j.dt):'old')===k).length;h+=`<div class="day">${k==='old'?'更早':k===td?'今天':k===yd?'昨天':k.slice(5).replace('-','月')+'日'} · 完成 ${c} 件</div>`}
+      const x=new Date(d);h+=`<li class="done" data-id="${i.id}"><button class="chk" data-act="toggle" aria-label="恢复"></button>
+      <span class="t">${esc(i.text)}<span class="tag">${i.cat==='long'?'🌱 长期':'⚡ 立刻'}${i.dt?' · '+pad(x.getHours())+':'+pad(x.getMinutes()):''}</span></span>
+      <button class="mini" data-act="del">✕</button></li>`});
+    $('list').innerHTML=h||'<div class="empty">还没有完成的事，做完一件就会出现在这里 ✨</div>';return}
+  const list=items.filter(i=>i.cat===tab&&!i.done).sort((a,b)=>b.t-a.t);
   $('list').innerHTML=list.length?list.map(i=>`<li class="${i.done?'done':''}" data-id="${i.id}">
     <button class="chk" data-act="toggle" aria-label="完成"></button>
     <span class="t">${esc(i.text)}${i.m?`<span class="tag">${i.m>=60?'1小时+':i.m+'分钟'}</span>`:''}</span>
@@ -210,7 +221,7 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;re
 $('list').onclick=e=>{
   const a=e.target.dataset.act;if(!a)return;
   const id=e.target.closest('li').dataset.id, it=items.find(i=>i.id===id);
-  if(a==='toggle'){it.done=!it.done;const v=it.cat==='long'?30:10;if(it.done){award(v,it.cat==='long'?'长期目标达成！':'');confetti()}else unaward(v)}
+  if(a==='toggle'){it.done=!it.done;it.dt=it.done?Date.now():0;if(!it.done)toast('已恢复到「'+(it.cat==='long'?'长期想做':'立刻去做')+'」');const v=it.cat==='long'?30:10;if(it.done){award(v,it.cat==='long'?'长期目标达成！':'');confetti()}else unaward(v)}
   if(a==='move')it.cat=it.cat==='now'?'long':'now';
   if(a==='del'){const idx=items.indexOf(it);items.splice(idx,1);save();render();
     toastAct('已删除',()=>{items.splice(idx,0,it);save();render()});return}
@@ -250,7 +261,7 @@ $('fStart').onclick=()=>{
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tick&&mode==='focus'){stopTick();st.wilt=(st.wilt||0)+1;saveS();
   left=len*60;$('timer').textContent=fmt(left);$('plant').textContent='🥀';$('fStart').textContent='重新开始';$('lens').style.display='';
   setTimeout(()=>toast('刚才离开了，小树枯了 🥀 没关系，再来一次'),300)}});
-$('fDone').onclick=()=>{const it=items.find(i=>i.id===focusId);if(it&&!it.done){it.done=true;award(it.cat==='long'?30:10,'');confetti()}save();endFocus();setTimeout(()=>toast('太棒了，划掉一件 ✅'),1700)};
+$('fDone').onclick=()=>{const it=items.find(i=>i.id===focusId);if(it&&!it.done){it.done=true;it.dt=Date.now();award(it.cat==='long'?30:10,'');confetti()}save();endFocus();setTimeout(()=>toast('太棒了，划掉一件 ✅'),1700)};
 $('fExit').onclick=endFocus;
 $('fBreak').onclick=()=>{ui('break');left=5*60;$('plant').textContent='☕';$('timer').textContent=fmt(left);$('fStart').textContent='暂停';
   endAt=Date.now()+left*1000;stopTick();tick=setInterval(step,500);};
