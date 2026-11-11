@@ -108,6 +108,7 @@ let forest = loadRaw(FOREST_KEY);
 let pendingReveal = null;
 let revealTimer = 0;
 let scrollGrove = false;
+let justPlantedId = '';
 const TREES = window.EUREKA_TREES || [];
 const TREE_BY_ID = {};
 TREES.forEach(t => { TREE_BY_ID[t.id] = t; });
@@ -180,6 +181,7 @@ function plantForTask(it) {
   forest.planted.push(planted);
   saveForest();
   scrollGrove = true;
+  justPlantedId = planted.id;
   return { tree, planted, boosted };
 }
 function migrateForest() {
@@ -197,67 +199,199 @@ function migrateForest() {
 }
 function renderTreeSvg(tree) {
   const holder = document.createElement('template');
-  holder.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + (tree.vb || '0 0 64 80') + '" aria-hidden="true">' + tree.svg + '</svg>';
+  holder.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + (tree.vb || '0 0 64 80') + '" preserveAspectRatio="xMidYMax meet" aria-hidden="true">' + tree.svg + '</svg>';
   return holder.content.firstElementChild;
+}
+const GROVE_H = 312;
+function groveRnd(i) {
+  const x = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+function hillPath(w, base, amp, phase) {
+  let d = 'M0 ' + base.toFixed(1);
+  const step = 56;
+  for (let x = 0; x <= w; x += step) {
+    const nx = Math.min(w, x + step);
+    const wave = px => base - Math.sin(px * 0.013 + phase) * amp - Math.sin(px * 0.037 + phase * 1.7) * amp * 0.36;
+    const y1 = wave(x + step * 0.35);
+    const y2 = wave(nx);
+    d += ' C' + (x + step * 0.35).toFixed(1) + ' ' + y1.toFixed(1)
+      + ' ' + (x + step * 0.7).toFixed(1) + ' ' + y2.toFixed(1)
+      + ' ' + nx.toFixed(1) + ' ' + y2.toFixed(1);
+  }
+  return d + ' L' + w + ' ' + GROVE_H + ' L0 ' + GROVE_H + ' Z';
+}
+function sceneBush(x, y, s) {
+  return '<ellipse cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" rx="' + (18 * s).toFixed(1) + '" ry="' + (8 * s).toFixed(1) + '" fill="var(--bush)"/>'
+    + '<ellipse cx="' + (x - 8 * s).toFixed(1) + '" cy="' + (y + 1).toFixed(1) + '" rx="' + (10 * s).toFixed(1) + '" ry="' + (6 * s).toFixed(1) + '" fill="var(--bush-2)"/>';
+}
+function sceneFlower(x, y, alt) {
+  const c = alt ? 'var(--flower-2)' : 'var(--flower)';
+  return '<path d="M' + x + ' ' + (y + 7) + ' v-7" stroke="var(--grass-2)" stroke-width="1.2" fill="none"/>'
+    + '<circle cx="' + (x - 2.6) + '" cy="' + (y - 1) + '" r="2.1" fill="' + c + '"/>'
+    + '<circle cx="' + (x + 2.6) + '" cy="' + (y - 1) + '" r="2.1" fill="' + c + '"/>'
+    + '<circle cx="' + x + '" cy="' + (y - 3) + '" r="2.1" fill="' + c + '"/>'
+    + '<circle cx="' + x + '" cy="' + (y + 1) + '" r="2" fill="' + c + '"/>'
+    + '<circle cx="' + x + '" cy="' + y + '" r="1.25" fill="var(--flower-c)"/>';
+}
+function sceneTuft(x, y, h) {
+  return '<path d="M' + x + ' ' + y
+    + ' c-2 -' + h + ' -1 -' + (h + 3) + ' 0 -' + (h + 6)
+    + ' c1 ' + h + ' 2 ' + (h + 2) + ' 0 ' + (h + 6)
+    + ' M' + (Number(x) + 4) + ' ' + y
+    + ' c-1 -' + (h - 1) + ' 2 -' + (h + 4) + ' 3 -' + (h + 1)
+    + '" stroke="var(--grass)" stroke-width="1.5" fill="none" stroke-linecap="round"/>';
+}
+function landMarkup(w) {
+  const lane = 'M-30 ' + (GROVE_H - 46)
+    + ' C ' + Math.round(w * 0.24) + ' ' + (GROVE_H - 68)
+    + ', ' + Math.round(w * 0.5) + ' ' + (GROVE_H - 34)
+    + ', ' + Math.round(w * 0.74) + ' ' + (GROVE_H - 56)
+    + ' S ' + (w + 40) + ' ' + (GROVE_H - 38) + ', ' + (w + 70) + ' ' + (GROVE_H - 50);
+  let bushes = '';
+  for (let i = 0; i < Math.ceil(w / 150); i++) bushes += sceneBush(36 + i * 150 + groveRnd(i + 3) * 36, 128 + groveRnd(i + 8) * 10, 0.62 + groveRnd(i) * 0.35);
+  let moss = '';
+  for (let i = 0; i < Math.ceil(w / 34); i++) {
+    moss += '<ellipse cx="' + (groveRnd(i + 20) * w).toFixed(1) + '" cy="' + (228 + groveRnd(i + 40) * 64).toFixed(1) + '" rx="' + (7 + groveRnd(i) * 11).toFixed(1) + '" ry="3" fill="var(--moss)"/>';
+  }
+  let rocks = '';
+  for (let i = 0; i < Math.ceil(w / 140); i++) {
+    const x = 28 + i * 140 + groveRnd(i + 11) * 30;
+    const y = GROVE_H - 30 - groveRnd(i + 5) * 16;
+    rocks += '<ellipse cx="' + x.toFixed(1) + '" cy="' + (y + 2).toFixed(1) + '" rx="8" ry="3.6" fill="var(--rock)"/>'
+      + '<ellipse cx="' + (x - 1).toFixed(1) + '" cy="' + y.toFixed(1) + '" rx="6.2" ry="3" fill="var(--rock-lite)"/>';
+  }
+  let blooms = '';
+  for (let i = 0; i < Math.ceil(w / 84); i++) {
+    blooms += sceneFlower(Math.round(22 + i * 84 + groveRnd(i + 15) * 18), Math.round(GROVE_H - 62 - groveRnd(i + 2) * 14), i % 2 === 0);
+  }
+  return '<path d="' + hillPath(w, 124, 14, 0.4) + '" fill="var(--hill-far)"/>'
+    + bushes
+    + '<path d="' + hillPath(w, 172, 12, 1.4) + '" fill="var(--hill-mid)"/>'
+    + '<path d="' + hillPath(w, 216, 10, 2.1) + '" fill="var(--hill-near)"/>'
+    + '<path d="' + hillPath(w, 258, 6, 0.7) + '" fill="var(--hill-front)"/>'
+    + moss
+    + '<path d="' + lane + '" fill="none" stroke="var(--path)" stroke-width="18" stroke-linecap="round"/>'
+    + '<path d="' + lane + '" fill="none" stroke="var(--path-core)" stroke-width="9" stroke-linecap="round"/>'
+    + rocks + blooms;
+}
+function foreMarkup(w) {
+  let g = '';
+  for (let i = 0; i < Math.ceil(w / 14); i++) {
+    g += sceneTuft((4 + i * 14 + groveRnd(i + 70) * 5).toFixed(1), GROVE_H - 1, (6 + groveRnd(i + 90) * 7).toFixed(1));
+  }
+  for (let i = 0; i < Math.ceil(w / 110); i++) g += sceneFlower(Math.round(36 + i * 110), GROVE_H - 14, i % 2 === 1);
+  return g;
+}
+function svgLayer(w, kind) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'scenery ' + kind);
+  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + GROVE_H);
+  svg.setAttribute('width', String(w));
+  svg.setAttribute('height', String(GROVE_H));
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = kind === 'fore' ? foreMarkup(w) : landMarkup(w);
+  return svg;
+}
+function plantedLabel(at) {
+  const d = new Date(at || 0);
+  if (!at || isNaN(d.getTime())) return '种下的树';
+  return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日种下';
 }
 function renderGrove() {
   ensureForest();
-  const owned = {};
-  forest.planted.forEach(p => { owned[p.treeId] = (owned[p.treeId] || 0) + 1; });
-  const kinds = Object.keys(owned).length;
-  $('groveNote').textContent = forest.planted.length
-    ? '已种 ' + forest.planted.length + ' 棵 · 图鉴 ' + kinds + '/30。点按森林打开图鉴。'
-    : '完成一件事，这里会长出第一棵树。';
-  const world = $('groveWorld');
-  world.replaceChildren();
-  const ground = document.createElement('div');
-  ground.className = 'grove-ground';
-  const n = forest.planted.length;
-  const rows = 3;
-  const cols = Math.max(1, Math.ceil(n / rows));
-  const spacing = n > 24 ? 44 : 50;
-  const width = Math.max(320, 16 + cols * spacing + 36);
-  world.style.width = width + 'px';
-  world.appendChild(ground);
-  const depth = [
-    { scale: 0.64, bottom: 108 },
-    { scale: 0.84, bottom: 62 },
-    { scale: 1.05, bottom: 16 }
-  ];
-  for (let i = 0; i < Math.ceil(width / 70); i++) {
-    const shrub = document.createElement('i');
-    shrub.className = 'shrub';
-    shrub.style.left = (12 + i * 70) + 'px';
-    shrub.style.bottom = (i % 2 ? 100 : 28) + 'px';
-    shrub.style.transform = 'scale(' + (0.7 + (i % 3) * 0.2) + ')';
-    world.appendChild(shrub);
-  }
-  if (!n) {
-    const empty = document.createElement('p');
-    empty.className = 'grove-empty';
-    empty.textContent = '草地还空着';
-    world.appendChild(empty);
-  }
-  forest.planted.forEach((p, i) => {
+  const planted = forest.planted;
+  const counts = { common: 0, rare: 0, epic: 0, legendary: 0 };
+  const kinds = {};
+  planted.forEach(p => {
     const spec = treeById(p.treeId);
     if (!spec) return;
-    const node = document.createElement('div');
-    node.className = 'grove-tree tier-' + spec.tier;
-    const row = i % rows;
-    const col = Math.floor(i / rows);
-    const d = depth[row];
-    const jitter = p.jitter || 0;
-    const s = d.scale * (0.94 + (Math.abs(jitter) % 5) * 0.025);
-    node.style.left = (10 + col * spacing + jitter * 0.35 + row * 14) + 'px';
-    node.style.bottom = (d.bottom + (p.y || 0) * 0.35) + 'px';
-    node.style.zIndex = String(row * 30 + col);
-    node.style.transform = 'scale(' + (p.flip ? -s : s) + ', ' + s + ')';
-    node.appendChild(renderTreeSvg(spec));
+    counts[spec.tier] = (counts[spec.tier] || 0) + 1;
+    kinds[p.treeId] = 1;
+  });
+  const found = Object.keys(kinds).length;
+  $('groveCount').textContent = planted.length + ' 棵';
+  const chips = $('groveChips');
+  chips.replaceChildren();
+  [['common', '普通'], ['rare', '稀有'], ['epic', '史诗'], ['legendary', '传说']].forEach(pair => {
+    const chip = document.createElement('span');
+    chip.className = 'gchip g-' + pair[0] + (counts[pair[0]] ? ' on' : '');
+    chip.appendChild(document.createElement('i'));
+    chip.appendChild(document.createTextNode(pair[1] + ' ' + counts[pair[0]]));
+    chips.appendChild(chip);
+  });
+  $('groveBar').style.width = (found / 30 * 100) + '%';
+  $('groveKinds').textContent = found + '/30';
+  $('groveNote').textContent = forest.focusBonus > 0
+    ? '下一棵有专注加成。' + (planted.length ? '点一棵树可以看详情。' : '')
+    : (planted.length ? '点一棵树看详情，点空地打开图鉴。' : '完成一件事，种下第一棵。');
+  const world = $('groveWorld');
+  world.replaceChildren();
+  const n = planted.length;
+  const view = Math.max(280, ($('groveScroll') && $('groveScroll').clientWidth) || 320);
+  const per = Math.max(1, Math.ceil(n / 3));
+  const gap = n ? Math.min(64, Math.max(50, (view - 28) / per)) : 64;
+  const width = Math.max(view, Math.round(8 + (per - 1) * gap + 58));
+  world.style.width = width + 'px';
+  world.appendChild(svgLayer(width, 'land'));
+  if (!n) {
+    const invite = document.createElement('div');
+    invite.className = 'grove-invite';
+    invite.innerHTML = '<svg class="sap" viewBox="0 0 46 62" aria-hidden="true"><ellipse cx="23" cy="58" rx="10" ry="2.4" fill="#3e6b48"/><path d="M23 56 V32" stroke="#6b4423" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M23 44c-10-1-14-10-10-16 7 3 9 8 10 14z" fill="#8fce9a"/><path d="M23 38c9-1 14-9 11-15-7 4-10 9-11 15z" fill="#2f7a4e"/><circle cx="23" cy="30" r="2.2" fill="#d5f5df"/></svg><div class="sign"><b>还没有树</b><span>完成一件事<br>种下第一棵</span><i class="post"></i></div>';
+    world.appendChild(invite);
+  }
+  const bands = [
+    { scale: 0.66, foot: 166 },
+    { scale: 0.82, foot: 112 },
+    { scale: 0.96, foot: 42 }
+  ];
+  const bandOf = [0, 2, 1];
+  planted.forEach((p, i) => {
+    const spec = treeById(p.treeId);
+    if (!spec) return;
+    const band = bandOf[i % 3];
+    const col = Math.floor(i / 3);
+    const b = bands[band];
+    const stagger = [0, gap * 0.46, gap * 0.16][band];
+    const s = b.scale * (0.94 + Math.min(0.12, Math.abs((p.scale || 1) - 0.9)));
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.className = 'grove-tree tier-' + spec.tier + ' style-' + spec.style + ' d' + band + (p.id === justPlantedId ? ' is-new' : '');
+    node.style.left = Math.round(6 + col * gap + stagger + (p.jitter || 0) * 0.85) + 'px';
+    node.style.bottom = Math.round(b.foot + (p.y || 0) * 0.4) + 'px';
+    node.style.zIndex = String(6 + band * 8 + (col % 6));
+    node.style.transform = 'scale(' + (p.flip ? -s : s) + ',' + s + ')';
+    node.setAttribute('aria-label', spec.name);
+    const grow = document.createElement('span');
+    grow.className = 'grow';
+    const shade = document.createElement('i');
+    shade.className = 'shade';
+    const sway = document.createElement('span');
+    sway.className = 'sway';
+    sway.style.animationDelay = (p.id === justPlantedId ? 0.95 : (i % 6) * 0.45) + 's';
+    sway.appendChild(renderTreeSvg(spec));
+    grow.appendChild(shade);
+    grow.appendChild(sway);
+    node.appendChild(grow);
+    if (p.id === justPlantedId) {
+      const seed = document.createElement('i');
+      seed.className = 'seed';
+      node.appendChild(seed);
+    }
+    node.addEventListener('click', e => {
+      e.stopPropagation();
+      openTreePop(p, spec);
+    });
     world.appendChild(node);
   });
+  world.appendChild(svgLayer(width, 'fore'));
+  justPlantedId = '';
   if (scrollGrove) {
     scrollGrove = false;
-    requestAnimationFrame(() => { $('grove').scrollLeft = $('grove').scrollWidth; });
+    requestAnimationFrame(() => {
+      const sc = $('groveScroll');
+      if (sc) sc.scrollLeft = sc.scrollWidth;
+    });
   }
 }
 function renderCodex() {
@@ -296,6 +430,21 @@ function closeCodex() {
 function closeReveal() {
   clearTimeout(revealTimer);
   $('reveal').hidden = true;
+  unlockBody();
+}
+function openTreePop(plant, spec) {
+  if (!spec) return;
+  const card = $('treePopCard');
+  card.className = 'tree-pop-card tier-' + spec.tier;
+  $('treePopArt').replaceChildren(renderTreeSvg(spec));
+  $('treePopName').textContent = spec.name;
+  $('treePopMeta').textContent = (window.EUREKA_TIER_NAME[spec.tier] || '') + ' · ' + (window.EUREKA_STYLE_NAME[spec.style] || '');
+  $('treePopDate').textContent = plantedLabel(plant && plant.at);
+  $('treePop').hidden = false;
+  lockBody();
+}
+function closeTreePop() {
+  $('treePop').hidden = true;
   unlockBody();
 }
 function openReveal(info) {
@@ -456,6 +605,7 @@ function setView(next) {
     else b.removeAttribute('aria-current');
   });
   if (!locked) window.scrollTo(0, 0);
+  if (next === 'stats') renderGrove();
 }
 
 function choose() {
@@ -1099,6 +1249,7 @@ function bind() {
   $('sheetBackdrop').addEventListener('click', closeSheet);
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
+    if (!$('treePop').hidden) { closeTreePop(); return; }
     if (!$('reveal').hidden) { closeReveal(); return; }
     if (!$('codex').hidden) { closeCodex(); return; }
     if (!$('sheet').hidden && $('sheet').classList.contains('show')) { closeSheet(); return; }
@@ -1166,12 +1317,16 @@ function bind() {
 $('plantSlot').appendChild(makeTree('sprout'));
 let groveMoved = false;
 let groveX = 0;
-$('grove').addEventListener('pointerdown', e => { groveX = e.clientX; groveMoved = false; });
-$('grove').addEventListener('pointermove', e => { if (Math.abs(e.clientX - groveX) > 8) groveMoved = true; });
-$('grove').addEventListener('click', () => { if (!groveMoved) openCodex(); });
-$('grove').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCodex(); } });
+$('groveScroll').addEventListener('pointerdown', e => { groveX = e.clientX; groveMoved = false; });
+$('groveScroll').addEventListener('pointermove', e => { if (Math.abs(e.clientX - groveX) > 8) groveMoved = true; });
+$('groveScroll').addEventListener('click', e => {
+  if (e.target.closest('.grove-tree')) return;
+  if (!groveMoved) openCodex();
+});
 $('openCodex').addEventListener('click', openCodex);
 $('closeCodex').addEventListener('click', closeCodex);
+$('treePopClose').addEventListener('click', closeTreePop);
+$('treePop').addEventListener('click', e => { if (e.target === $('treePop')) closeTreePop(); });
 $('revealOk').addEventListener('click', closeReveal);
 $('reveal').addEventListener('click', e => { if (e.target === $('reveal')) closeReveal(); });
 migrateForest();

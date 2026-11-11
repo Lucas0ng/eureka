@@ -411,108 +411,302 @@ li.empty {
 
 .grove-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .grove-head .card-title { margin: 0; }
+.grove-count {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pine-ink);
+  font-variant-numeric: tabular-nums;
+}
 .grove-head .text-btn { min-height: 36px; font-size: 14px; }
-.grove-card .meta { margin: 6px 0 10px; }
+.grove-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; }
+.gchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px 0 7px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+.gchip i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.gchip.on { color: var(--ink); }
+.gchip.g-rare.on { background: #d7e7f2; color: #1d4e6e; }
+.gchip.g-epic.on { background: #eadcf3; color: #5c3278; }
+.gchip.g-legendary.on { background: #f8e7c0; color: #6e5420; }
+.grove-meter { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.grove-progress {
+  flex: 1;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--fill);
+  overflow: hidden;
+}
+.grove-progress i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--pine);
+}
+.grove-meter span {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mute);
+  font-variant-numeric: tabular-nums;
+}
+.grove-card .meta { margin: 0 0 10px; }
+
 .grove {
+  --sky-0: #c5e4f4;
+  --sky-1: #e7f3e4;
+  --haze: #c9e2cc;
+  --hill-far: #d3e7d4;
+  --hill-mid: #b4d5b6;
+  --hill-near: #8fbf96;
+  --hill-front: #5f9a72;
+  --bush: #7eae84;
+  --bush-2: #5b946c;
+  --path: #e7d7b4;
+  --path-core: #f7f1e4;
+  --rock: #8d877e;
+  --rock-lite: #d4cdc2;
+  --flower: #e9899e;
+  --flower-2: #f0d78a;
+  --flower-c: #fff;
+  --grass: #2f6a45;
+  --grass-2: #4e9464;
+  --moss: rgba(47, 106, 69, .28);
   position: relative;
-  height: 252px;
+  height: 312px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--sky-0) 0%, var(--sky-1) 46%, var(--hill-far) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .45), inset 0 -18px 28px rgba(30, 60, 40, .08);
+}
+.grove-sky { position: absolute; inset: 0; z-index: 0; pointer-events: none; color: var(--haze); }
+.sky-sun { position: absolute; top: 10px; right: 16px; width: 54px; height: 54px; }
+.sky-moon { position: absolute; top: 12px; right: 22px; width: 42px; height: 42px; opacity: 0; }
+.sky-stars { position: absolute; inset: 0 0 40% 0; width: 100%; height: 58%; opacity: 0; }
+.horizon { position: absolute; left: 0; right: 0; top: 38%; width: 100%; height: 78px; }
+.cloud { position: absolute; height: auto; color: #fff; }
+.cloud.c1 { width: 96px; top: 14px; left: 8%; animation: drift 18s ease-in-out infinite; }
+.cloud.c2 { width: 70px; top: 44px; left: 46%; opacity: .8; animation: drift 22s ease-in-out infinite reverse; }
+.firefly {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #e7f6a8;
+  box-shadow: 0 0 8px 2px rgba(231, 246, 168, .85);
+  opacity: 0;
+}
+.f1 { left: 18%; top: 42%; animation: fly 6.5s ease-in-out infinite; }
+.f2 { left: 46%; top: 34%; animation: fly 8s ease-in-out .8s infinite; }
+.f3 { left: 68%; top: 48%; animation: fly 7.2s ease-in-out 1.4s infinite; }
+.f4 { left: 82%; top: 30%; animation: fly 9s ease-in-out .4s infinite; }
+@keyframes drift {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(18px); }
+}
+@keyframes fly {
+  0%, 100% { transform: translate(0, 0); opacity: .25; }
+  50% { transform: translate(14px, -12px); opacity: 1; }
+}
+.grove-scroll {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   overflow-x: auto;
   overflow-y: hidden;
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 78% 16%, #f6e3a8 0 14px, transparent 16px),
-    linear-gradient(#e7f3ea, #d5e6da 62%);
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.grove-scroll::-webkit-scrollbar { display: none; }
 .grove-world { position: relative; height: 100%; min-width: 100%; }
-.grove-ground {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 148px;
-  background: linear-gradient(#b7d7b6 0%, #8fbf93 38%, #6fa37a 70%, #568a64 100%);
-}
-.grove-ground::before {
-  content: "";
-  position: absolute;
-  left: 6%;
-  width: 46%;
-  top: -16px;
-  height: 32px;
-  background: #8fbc93;
-  border-radius: 50%;
-  opacity: .9;
-}
-.shrub {
-  position: absolute;
-  bottom: 36px;
-  width: 26px;
-  height: 14px;
-  border-radius: 14px 14px 5px 5px;
-  background: #3f7a56;
-  opacity: .45;
-  z-index: 0;
-}
+.scenery { position: absolute; left: 0; top: 0; display: block; }
+.scenery.fore { z-index: 40; pointer-events: none; }
+
 .grove-tree {
   position: absolute;
-  width: 52px;
-  height: 68px;
+  width: 54px;
+  height: 72px;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  appearance: none;
+  background: none;
   transform-origin: 50% 100%;
-  background: none;
+  cursor: pointer;
 }
-.grove-tree svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  background: none;
-  overflow: visible;
-}
-.grove-tree.tier-rare::before,
-.grove-tree.tier-epic::before,
-.grove-tree.tier-legendary::before {
-  content: "";
+.grove-tree .grow {
   position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 2%;
-  height: 62%;
+  inset: 0;
+  transform-origin: 50% 100%;
+}
+.grove-tree .shade {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 1px;
+  height: 8px;
   border-radius: 50%;
-  z-index: -1;
-  pointer-events: none;
+  background: rgba(24, 48, 28, .28);
 }
-.grove-tree.tier-rare::before { background: radial-gradient(circle, rgba(80, 160, 210, .55), transparent 68%); }
-.grove-tree.tier-epic::before { background: radial-gradient(circle, rgba(176, 120, 210, .5), transparent 68%); }
-.grove-tree.tier-legendary::before { background: radial-gradient(circle, rgba(240, 196, 90, .75), transparent 64%); }
-.grove-tree.tier-legendary::after {
+.grove-tree .sway {
+  position: absolute;
+  inset: 0 0 2px;
+  transform-origin: 50% 96%;
+  animation: sway 4.8s ease-in-out infinite;
+}
+.grove-tree .sway svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.grove-tree.style-pixel .sway svg { image-rendering: pixelated; }
+.grove-tree.d0 { opacity: .9; }
+.grove-tree .grow::before {
   content: "";
   position: absolute;
-  width: 5px;
-  height: 5px;
-  top: 8%;
-  right: 10%;
+  left: 12%;
+  right: 12%;
+  top: 4%;
+  height: 52%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+.grove-tree.tier-rare .grow::before { background: radial-gradient(circle, rgba(90, 170, 210, .28), transparent 70%); }
+.grove-tree.tier-epic .grow::before { background: radial-gradient(circle, rgba(176, 130, 214, .3), transparent 70%); }
+.grove-tree.tier-legendary .grow::before { background: radial-gradient(circle, rgba(255, 214, 120, .42), transparent 68%); }
+.grove-tree.tier-epic .sway { animation-duration: 5.6s; }
+.grove-tree.tier-legendary .sway { animation-name: sway-lg; animation-duration: 5.2s; }
+.grove-tree.tier-legendary .sway::after {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  top: 12%;
+  right: 18%;
   background: #fff6d0;
   transform: rotate(45deg);
-  box-shadow: -16px 10px 0 -1px #fff6d0, -6px 18px 0 -1.5px #ffe08a;
-  z-index: 2;
+  box-shadow: -14px 12px 0 -0.5px #fff6d0, -4px 20px 0 -1px #ffe08a;
+  animation: twinkle 2.8s ease-in-out infinite;
   pointer-events: none;
 }
-.grove-empty {
+.grove-tree .seed {
   position: absolute;
-  left: 16px; right: 16px; top: 36px;
-  text-align: center;
-  color: var(--mute);
-  font-size: 13px;
+  left: 50%;
+  top: 6px;
+  width: 8px;
+  height: 10px;
+  margin-left: -4px;
+  border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(circle at 35% 30%, #e7c48a, #6b4423 72%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
 }
+.grove-tree.is-new .grow { animation: sprout .95s cubic-bezier(.2, .85, .2, 1) both; }
+.grove-tree.is-new .seed { animation: seedfall .5s ease-in both; }
+.grove-tree:focus-visible { outline: 2px solid var(--pine); outline-offset: 2px; border-radius: 12px; }
+
+.grove-invite {
+  position: absolute;
+  left: 50%;
+  bottom: 72px;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.grove-invite .sap {
+  width: 46px;
+  height: 62px;
+  flex: none;
+}
+.sign {
+  position: relative;
+  min-width: 138px;
+  padding: 8px 10px 7px;
+  background: #f7f1e4;
+  color: #24362c;
+  border: 2px solid #6b4e36;
+  border-radius: 3px 7px 5px 4px;
+  box-shadow: 2px 3px 0 rgba(70, 44, 24, .16);
+}
+.sign b { display: block; font-size: 13px; letter-spacing: -.01em; }
+.sign span { display: block; margin-top: 1px; font-size: 11px; font-weight: 500; color: #6f6456; line-height: 1.35; }
+.sign .post {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 5px;
+  height: 26px;
+  margin-left: -2px;
+  background: linear-gradient(#8a6244, #5c3e28);
+  border-radius: 0 0 2px 2px;
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-1.15deg); }
+  50% { transform: rotate(1.15deg); }
+}
+@keyframes sway-lg {
+  0%, 100% { transform: rotate(-1.7deg); }
+  50% { transform: rotate(1.7deg); }
+}
+@keyframes sprout {
+  0% { transform: translateY(18px) scale(.12, .16); opacity: 0; }
+  38% { transform: translateY(6px) scale(.5, .62); opacity: 1; }
+  72% { transform: translateY(-2px) scale(1.05, 1.08); }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes seedfall {
+  0% { transform: translateY(-28px); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: translateY(78px) scale(.45); opacity: 0; }
+}
+@keyframes twinkle { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
 @media (prefers-color-scheme: dark) {
+  .gchip.g-rare.on { background: #1a3344; color: #b7d7ee; }
+  .gchip.g-epic.on { background: #2c2038; color: #e0c4f2; }
+  .gchip.g-legendary.on { background: #3a3018; color: #f0d48a; }
   .grove {
-    background:
-      radial-gradient(circle at 78% 18%, rgba(246, 227, 168, .35) 0 14px, transparent 16px),
-      linear-gradient(#1a2822, #24362c 72%);
+    --sky-0: #0c1826;
+    --sky-1: #163028;
+    --haze: #1c3d34;
+    --hill-far: #1e4a3a;
+    --hill-mid: #1a4034;
+    --hill-near: #16382c;
+    --hill-front: #10281f;
+    --bush: #24543f;
+    --bush-2: #18382c;
+    --path: #3a3428;
+    --path-core: #4e4638;
+    --rock: #3a3834;
+    --rock-lite: #6a655c;
+    --flower: #e7a0b4;
+    --flower-2: #e6d7a4;
+    --flower-c: #f7f1e4;
+    --grass: #0e241c;
+    --grass-2: #1d4634;
+    --moss: rgba(8, 24, 16, .45);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04), inset 0 -16px 24px rgba(0, 0, 0, .28);
   }
-  .grove-ground {
-    background: linear-gradient(#2c5340 0%, #24503a 45%, #1b3d2e 100%);
-  }
-  .grove-ground::before { background: #2a5340; }
-  .shrub { background: #1d4634; }
+  .sky-sun { opacity: 0; }
+  .sky-moon, .sky-stars { opacity: 1; }
+  .cloud, .cloud.c1, .cloud.c2 { color: #c5d2e0; opacity: .42; }
+  .firefly { opacity: 1; }
+  .grove-tree .shade { background: rgba(0, 0, 0, .45); }
+  .sign { background: #2a2824; color: #f4f1ea; border-color: #c4a574; }
+  .sign span { color: #b0aa9f; }
+  .sign .post { background: linear-gradient(#a07850, #6b4e36); }
 }
 
 .codex {
@@ -540,8 +734,9 @@ li.empty {
   text-align: center;
   min-height: 138px;
 }
-.codex-card .art { height: 74px; display: grid; place-items: center; }
-.codex-card .art svg { width: 52px; height: 68px; }
+.codex-card { min-height: 168px; }
+.codex-card .art { height: 98px; display: grid; place-items: end center; }
+.codex-card .art svg { width: 72px; height: 94px; }
 .codex-card .nm { font-size: 12px; font-weight: 600; line-height: 1.3; min-height: 32px; }
 .codex-card .subline { font-size: 11px; color: var(--mute); }
 .codex-card.locked .art { color: var(--faint); }
@@ -596,6 +791,56 @@ li.empty {
 }
 .reveal-card .btn { margin-top: 14px; }
 @keyframes pop { from { transform: scale(.88); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.tree-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px 16px calc(16px + var(--safe-b));
+  background: rgba(20, 18, 14, .42);
+}
+.tree-pop-card {
+  width: min(100%, 380px);
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 16px 16px 14px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .22);
+  border: 1px solid var(--line);
+}
+.tree-pop-art {
+  position: relative;
+  height: 176px;
+  border-radius: 18px;
+  display: grid;
+  place-items: end center;
+  overflow: hidden;
+  background: linear-gradient(180deg, #d5eef8 0%, #e7f4e8 46%, #c5dfc4 68%, #6ea37a 100%);
+}
+.tree-pop-art::after {
+  content: "";
+  position: absolute;
+  left: 24%;
+  right: 24%;
+  bottom: 16px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(36, 70, 44, .2);
+}
+.tree-pop-art svg { position: relative; z-index: 1; width: 120px; height: 156px; margin-bottom: 4px; }
+.tree-pop-copy h3 { margin: 10px 0 2px; font-size: 22px; letter-spacing: -.02em; }
+.tree-pop-copy p { margin: 0; font-size: 13px; font-weight: 600; color: var(--pine-ink); }
+.tree-pop-copy .meta { margin-top: 4px; font-weight: 400; }
+.tree-pop-card .btn { margin-top: 14px; }
+.tree-pop-card.tier-rare { box-shadow: 0 0 0 1px #3d7ea6, 0 24px 60px rgba(0, 0, 0, .22); }
+.tree-pop-card.tier-epic { box-shadow: 0 0 0 1px #9b6bb8, 0 24px 60px rgba(0, 0, 0, .22); }
+.tree-pop-card.tier-legendary { box-shadow: 0 0 0 1px #e0b44a, 0 24px 60px rgba(0, 0, 0, .22); }
+@media (prefers-color-scheme: dark) {
+  .tree-pop-art { background: linear-gradient(180deg, #102033 0%, #163028 46%, #1a4034 66%, #10281f 100%); }
+}
 
 .badges { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .badge {
