@@ -1,11 +1,17 @@
 'use strict';
 
-/* Storage contract — do not rename. Existing phones keep their data.
+/* Storage contract — do not rename the original keys.
    eureka-items-v1: [{ id, text, cat:'now'|'long', done, t, m?, dt? }]
    eureka-stats-v1: { pts, days:{'Y-M-D': n}, focus, wilt? }
-   Backup file: { items, st } — old backups use this shape and must restore. */
+   eureka-forest-v1: { planted:[], migrated, focusBonus }
+   Backup file: { items, st, forest? } — old backups without forest still restore. */
 const ITEM_KEY = 'eureka-items-v1';
 const STAT_KEY = 'eureka-stats-v1';
+const FOREST_KEY = 'eureka-forest-v1';
+const ODDS = {
+  normal: [['common', 58], ['rare', 27], ['epic', 12], ['legendary', 3]],
+  boosted: [['common', 34], ['rare', 36], ['epic', 20], ['legendary', 10]]
+};
 const LEVELS = [
   { name: '新芽', icon: 'sprout' },
   { name: '小苗', icon: 'sapling' },
@@ -96,6 +102,216 @@ function save() {
 }
 function saveS() {
   localStorage.setItem(STAT_KEY, JSON.stringify(st));
+}
+
+let forest = loadRaw(FOREST_KEY);
+let pendingReveal = null;
+let revealTimer = 0;
+let scrollGrove = false;
+const TREES = window.EUREKA_TREES || [];
+const TREE_BY_ID = {};
+TREES.forEach(t => { TREE_BY_ID[t.id] = t; });
+
+function ensureForest() {
+  if (!forest || typeof forest !== 'object' || Array.isArray(forest)) forest = {};
+  if (!Array.isArray(forest.planted)) forest.planted = [];
+  if (typeof forest.focusBonus !== 'number') forest.focusBonus = 0;
+}
+function saveForest() {
+  localStorage.setItem(FOREST_KEY, JSON.stringify(forest));
+}
+function treeById(id) { return TREE_BY_ID[id] || null; }
+function applyForestBackup(raw) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.planted)) return;
+  forest = {
+    planted: raw.planted.filter(p => p && treeById(p.treeId)).map(p => ({
+      id: String(p.id || (Date.now() + Math.random())),
+      taskId: p.taskId == null ? '' : String(p.taskId),
+      treeId: p.treeId,
+      at: p.at || 0,
+      scale: Number(p.scale) || 1,
+      flip: !!p.flip,
+      y: Number(p.y) || 0,
+      jitter: Number(p.jitter) || 0
+    })),
+    migrated: true,
+    focusBonus: Number(raw.focusBonus) || 0
+  };
+  saveForest();
+}
+function rollTier(boosted) {
+  const table = boosted ? ODDS.boosted : ODDS.normal;
+  let r = Math.random() * 100;
+  for (let i = 0; i < table.length; i++) {
+    r -= table[i][1];
+    if (r < 0) return table[i][0];
+  }
+  return 'common';
+}
+function rollTree(boosted) {
+  const tier = rollTier(boosted);
+  const pool = TREES.filter(t => t.tier === tier);
+  return pool[Math.floor(Math.random() * pool.length)] || TREES[0];
+}
+function makePlant(taskId, tree) {
+  return {
+    id: Date.now() + '' + Math.random(),
+    taskId: taskId == null ? '' : String(taskId),
+    treeId: tree.id,
+    at: Date.now(),
+    scale: Math.round((0.84 + Math.random() * 0.28) * 100) / 100,
+    flip: Math.random() < 0.45,
+    y: Math.floor(Math.random() * 8),
+    jitter: Math.floor(Math.random() * 14) - 6
+  };
+}
+function alreadyPlanted(taskId) {
+  const id = String(taskId);
+  return forest.planted.some(p => p.taskId && p.taskId === id);
+}
+function plantForTask(it) {
+  ensureForest();
+  if (!it || alreadyPlanted(it.id)) return null;
+  const boosted = forest.focusBonus > 0;
+  const tree = rollTree(boosted);
+  if (!tree) return null;
+  if (boosted) forest.focusBonus = 0;
+  const planted = makePlant(it.id, tree);
+  forest.planted.push(planted);
+  saveForest();
+  scrollGrove = true;
+  return { tree, planted, boosted };
+}
+function migrateForest() {
+  ensureForest();
+  if (forest.migrated) return;
+  const done = items.filter(i => i && i.done);
+  const cap = Math.min(done.length, 24);
+  for (let i = 0; i < cap; i++) {
+    if (alreadyPlanted(done[i].id)) continue;
+    const tree = rollTree(false);
+    if (tree) forest.planted.push(makePlant(done[i].id, tree));
+  }
+  forest.migrated = true;
+  saveForest();
+}
+function renderTreeSvg(tree) {
+  const holder = document.createElement('template');
+  holder.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + (tree.vb || '0 0 64 80') + '" aria-hidden="true">' + tree.svg + '</svg>';
+  return holder.content.firstElementChild;
+}
+function renderGrove() {
+  ensureForest();
+  const owned = {};
+  forest.planted.forEach(p => { owned[p.treeId] = (owned[p.treeId] || 0) + 1; });
+  const kinds = Object.keys(owned).length;
+  $('groveNote').textContent = forest.planted.length
+    ? '已种 ' + forest.planted.length + ' 棵 · 图鉴 ' + kinds + '/30。点按森林打开图鉴。'
+    : '完成一件事，这里会长出第一棵树。';
+  const world = $('groveWorld');
+  world.replaceChildren();
+  const ground = document.createElement('div');
+  ground.className = 'grove-ground';
+  const n = forest.planted.length;
+  const width = Math.max(340, 28 + n * 46 + 36);
+  world.style.width = width + 'px';
+  world.appendChild(ground);
+  for (let i = 0; i < Math.ceil(width / 88); i++) {
+    const shrub = document.createElement('i');
+    shrub.className = 'shrub';
+    shrub.style.left = (18 + i * 88 + (i % 2) * 12) + 'px';
+    shrub.style.transform = 'scale(' + (0.8 + (i % 3) * 0.15) + ')';
+    world.appendChild(shrub);
+  }
+  if (!n) {
+    const empty = document.createElement('p');
+    empty.className = 'grove-empty';
+    empty.textContent = '草地还空着';
+    world.appendChild(empty);
+  }
+  forest.planted.forEach((p, i) => {
+    const spec = treeById(p.treeId);
+    if (!spec) return;
+    const node = document.createElement('div');
+    node.className = 'grove-tree tier-' + spec.tier;
+    const scale = p.scale || 1;
+    node.style.left = (8 + i * 46 + (p.jitter || 0)) + 'px';
+    node.style.bottom = (26 + (p.y || 0)) + 'px';
+    node.style.zIndex = String(i + 1);
+    node.style.transform = 'scale(' + (p.flip ? -scale : scale) + ', ' + scale + ')';
+    node.appendChild(renderTreeSvg(spec));
+    world.appendChild(node);
+  });
+  if (scrollGrove) {
+    scrollGrove = false;
+    requestAnimationFrame(() => { $('grove').scrollLeft = $('grove').scrollWidth; });
+  }
+}
+function renderCodex() {
+  ensureForest();
+  const owned = {};
+  forest.planted.forEach(p => { owned[p.treeId] = (owned[p.treeId] || 0) + 1; });
+  const found = Object.keys(owned).length;
+  $('codexNote').textContent = '已发现 ' + found + '/30。普通 58% · 稀有 27% · 史诗 12% · 传说 3%。专注结束后，下一棵更容易出稀有。';
+  const grid = $('codexGrid');
+  grid.replaceChildren();
+  TREES.forEach(tree => {
+    const count = owned[tree.id] || 0;
+    const card = el('div', 'codex-card' + (count ? '' : ' locked'));
+    card.dataset.tier = tree.tier;
+    const art = el('div', 'art');
+    const svg = renderTreeSvg(tree);
+    art.appendChild(svg);
+    card.appendChild(art);
+    card.appendChild(el('div', 'nm', count ? tree.name : '???'));
+    const tier = el('span', 'tier tier-' + tree.tier, window.EUREKA_TIER_NAME[tree.tier] || tree.tier);
+    card.appendChild(tier);
+    const styleName = count ? (window.EUREKA_STYLE_NAME[tree.style] || '') : '';
+    card.appendChild(el('div', 'subline', (styleName ? styleName + ' · ' : '') + '拥有 ' + count));
+    grid.appendChild(card);
+  });
+}
+function openCodex() {
+  renderCodex();
+  $('codex').hidden = false;
+  lockBody();
+}
+function closeCodex() {
+  $('codex').hidden = true;
+  unlockBody();
+}
+function closeReveal() {
+  clearTimeout(revealTimer);
+  $('reveal').hidden = true;
+  unlockBody();
+}
+function openReveal(info) {
+  if (!info || !info.tree) return;
+  const tree = info.tree;
+  const card = $('revealCard');
+  card.className = 'reveal-card tier-' + tree.tier;
+  const rare = tree.tier === 'epic' || tree.tier === 'legendary';
+  $('revealKicker').textContent = (info.boosted ? '专注加成 · ' : '') + (tree.tier === 'common' ? '种下了一棵树' : '新的树！');
+  const art = $('revealArt');
+  art.replaceChildren(renderTreeSvg(tree));
+  $('revealName').textContent = tree.name;
+  $('revealMeta').textContent = (window.EUREKA_TIER_NAME[tree.tier] || '') + ' · ' + (window.EUREKA_STYLE_NAME[tree.style] || '');
+  $('reveal').hidden = false;
+  lockBody();
+  clearTimeout(revealTimer);
+  if (!rare) revealTimer = setTimeout(closeReveal, tree.tier === 'rare' ? 2400 : 1700);
+  if (tree.tier === 'legendary') vibrate([80, 40, 120]);
+  else if (tree.tier !== 'common') vibrate(40);
+}
+function queueReveal(info) {
+  if (!info) return;
+  if ($('focus').classList.contains('show')) pendingReveal = info;
+  else openReveal(info);
+}
+function grantFocusBonus() {
+  ensureForest();
+  forest.focusBonus = 1;
+  saveForest();
 }
 
 function textOf(i) {
@@ -207,6 +423,8 @@ function lockBody() {
 function unlockBody() {
   if ($('focus').classList.contains('show')) return;
   if (!$('sheet').hidden && $('sheet').classList.contains('show')) return;
+  if ($('codex') && !$('codex').hidden) return;
+  if ($('reveal') && !$('reveal').hidden) return;
   if (!locked) return;
   locked = false;
   document.body.classList.remove('lock');
@@ -266,39 +484,8 @@ function renderStats() {
   $('barFill').style.width = pct + '%';
   $('toNext').textContent = '再得 ' + (L.acc + L.need - st.pts) + ' 分升级';
   $('nToday').textContent = st.days[dkey()] || 0;
-  $('nStreak').textContent = streak();
   $('nFocus').textContent = st.focus || 0;
-
-  const week = $('week');
-  week.replaceChildren();
-  const d = new Date();
-  d.setDate(d.getDate() - 6);
-  const cols = [];
-  let mx = 1;
-  for (let i = 0; i < 7; i++) {
-    const v = st.days[dkey(d)] || 0;
-    mx = Math.max(mx, v);
-    cols.push({ v, name: '日一二三四五六'[d.getDay()], today: i === 6 });
-    d.setDate(d.getDate() + 1);
-  }
-  cols.forEach(c => {
-    const col = el('div', 'col' + (c.today ? ' today' : ''));
-    col.appendChild(el('span', 'n', c.v ? String(c.v) : ''));
-    const bar = el('span', 'bar');
-    bar.style.height = Math.max(4, Math.round((c.v / mx) * 78)) + 'px';
-    col.appendChild(bar);
-    col.appendChild(el('span', 'd', c.name));
-    week.appendChild(col);
-  });
-
-  const n = st.focus || 0;
-  $('forestNote').textContent = n
-    ? '每完成一次专注，长出一棵。共 ' + n + ' 棵。'
-    : '还没有树。完成一次专注，这里会长出第一棵。';
-  const garden = $('garden');
-  garden.replaceChildren();
-  const show = Math.min(n, 24);
-  for (let i = 0; i < show; i++) garden.appendChild(makeTree('tree'));
+  renderGrove();
 
   const done = items.filter(i => i && i.done).length;
   const dl = items.filter(i => i && i.done && i.cat === 'long').length;
@@ -625,7 +812,9 @@ function syncFocusUI() {
   if (mode === 'done') {
     $('fPrimary').textContent = '休息 5 分钟';
     $('fDone').textContent = '标记做完';
-    $('fHint').textContent = '先休息一下，再决定继续还是换一件。';
+    $('fHint').textContent = forest && forest.focusBonus
+      ? '先休息一下，再决定继续还是换一件。下一棵树更容易遇到稀有。'
+      : '先休息一下，再决定继续还是换一件。';
   } else if (mode === 'break') {
     $('fPrimary').textContent = running ? '暂停' : '继续';
     $('fHint').textContent = '起来走走，喝口水，看看远处。';
@@ -697,6 +886,7 @@ function finishSession() {
   st.focus = (Number(st.focus) || 0) + 1;
   st.pts = (Number(st.pts) || 0) + gained;
   saveS();
+  grantFocusBonus();
   const after = level(st.pts).l;
   mode = 'done';
   running = false;
@@ -756,6 +946,11 @@ function endFocus() {
   document.title = DOC_TITLE;
   unlockBody();
   render();
+  if (pendingReveal) {
+    const info = pendingReveal;
+    pendingReveal = null;
+    setTimeout(() => openReveal(info), 280);
+  }
 }
 function completeFocused() {
   const it = items.find(i => i && i.id === focusId);
@@ -765,6 +960,7 @@ function completeFocused() {
     save();
     award(it.cat === 'long' ? 30 : 10, it.cat === 'long' ? '长期的也做到了' : '完成了一件');
     confetti();
+    queueReveal(plantForTask(it));
   }
   endFocus();
 }
@@ -849,6 +1045,7 @@ function bind() {
       if (it.done) {
         award(v, it.cat === 'long' ? '长期的也做到了' : '完成了一件');
         confetti();
+        queueReveal(plantForTask(it));
       } else {
         unaward(v);
         toast('已放回「' + (it.cat === 'long' ? '长期想做' : '立刻去做') + '」');
@@ -889,6 +1086,8 @@ function bind() {
   $('sheetBackdrop').addEventListener('click', closeSheet);
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
+    if (!$('reveal').hidden) { closeReveal(); return; }
+    if (!$('codex').hidden) { closeCodex(); return; }
     if (!$('sheet').hidden && $('sheet').classList.contains('show')) { closeSheet(); return; }
     if ($('focus').classList.contains('show')) endFocus();
   });
@@ -900,7 +1099,7 @@ function bind() {
     if (tick) step();
   });
   $('exp').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify({ items, st })], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ items, st, forest })], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'eureka-backup-' + dkey() + '.json';
@@ -925,7 +1124,7 @@ function bind() {
       pendingBackup = data;
       openSheet(panel => {
         panel.appendChild(el('h3', 'sheet-title', '用备份替换当前数据？'));
-        panel.appendChild(el('p', 'sheet-note', '这台手机上的清单和进度会被换成备份里的内容。以前导出的备份也可以用。'));
+        panel.appendChild(el('p', 'sheet-note', '清单和进度会换成备份里的内容。旧备份也能用。备份里如果带了森林，会一起换上。'));
         const ok = el('button', 'btn primary block', '替换');
         const cancel = el('button', 'btn soft block', '取消');
         ok.addEventListener('click', () => {
@@ -934,6 +1133,7 @@ function bind() {
           if (pendingBackup.st && typeof pendingBackup.st === 'object' && !Array.isArray(pendingBackup.st)) st = pendingBackup.st;
           ensureStats();
           normalizeItems();
+          if (pendingBackup.forest && typeof pendingBackup.forest === 'object') applyForestBackup(pendingBackup.forest);
           pickId = null;
           save();
           saveS();
@@ -951,6 +1151,17 @@ function bind() {
 }
 
 $('plantSlot').appendChild(makeTree('sprout'));
+let groveMoved = false;
+let groveX = 0;
+$('grove').addEventListener('pointerdown', e => { groveX = e.clientX; groveMoved = false; });
+$('grove').addEventListener('pointermove', e => { if (Math.abs(e.clientX - groveX) > 8) groveMoved = true; });
+$('grove').addEventListener('click', () => { if (!groveMoved) openCodex(); });
+$('grove').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCodex(); } });
+$('openCodex').addEventListener('click', openCodex);
+$('closeCodex').addEventListener('click', closeCodex);
+$('revealOk').addEventListener('click', closeReveal);
+$('reveal').addEventListener('click', e => { if (e.target === $('reveal')) closeReveal(); });
+migrateForest();
 bind();
 render();
 if ('serviceWorker' in navigator && location.search.indexOf('nosw=1') === -1) {

@@ -106,17 +106,17 @@
   </section>
   <section class="metrics" aria-label="统计">
     <div><b id="nToday">0</b><span>今天完成</span></div>
-    <div><b id="nStreak">0</b><span>连续天数</span></div>
     <div><b id="nFocus">0</b><span>专注次数</span></div>
   </section>
-  <section class="card">
-    <h2 class="card-title">最近 7 天</h2>
-    <div class="week" id="week"></div>
-  </section>
-  <section class="card">
-    <h2 class="card-title">专注森林</h2>
-    <p class="meta" id="forestNote"></p>
-    <div class="forest" id="garden"></div>
+  <section class="card grove-card">
+    <div class="grove-head">
+      <h2 class="card-title">我的森林</h2>
+      <button type="button" id="openCodex" class="text-btn">图鉴</button>
+    </div>
+    <p class="meta" id="groveNote"></p>
+    <div class="grove" id="grove">
+      <div class="grove-world" id="groveWorld"></div>
+    </div>
   </section>
   <section class="card">
     <h2 class="card-title">徽章</h2>
@@ -225,7 +225,7 @@
       <path d="M8.3 12.2 10.8 14.7 15.8 9.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
     </symbol>
     <symbol id="i-ten" viewBox="0 0 24 24">
-      <path fill="currentColor" d="M4.2 6.2h2.3v11.6H4.2V6.2Zm3.6 0h5.1c2.3 0 3.8 1.6 3.8 4.1 0 2.6-1.6 4.2-4 4.2H9.6v3.3H7.8V6.2Zm1.8 1.8v4.7h3c1.2 0 2-.7 2-2.3s-.8-2.4-2-2.4h-3Z"></path>
+      <text x="12" y="17" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor" font-family="-apple-system,BlinkMacSystemFont,sans-serif">10</text>
     </symbol>
     <symbol id="i-e" viewBox="0 0 24 24">
       <path fill="currentColor" d="M4.5 3.8h4.4v16.4H4.5V3.8Zm0 0h11.2v4.2H4.5V3.8Zm0 6.1h15v4.2h-15V9.9Zm0 6.1h11.2v4.2H4.5v-4.2Z"></path>
@@ -259,6 +259,25 @@
     </g>
   </svg>
 </template>
+<div id="codex" class="codex" hidden>
+  <header class="codex-top">
+    <button type="button" id="closeCodex" class="text-btn">返回</button>
+    <h2>树木图鉴</h2>
+    <span></span>
+  </header>
+  <p class="meta" id="codexNote"></p>
+  <div class="codex-grid" id="codexGrid"></div>
+</div>
+<div id="reveal" class="reveal" hidden>
+  <div class="reveal-card" id="revealCard">
+    <p class="reveal-kicker" id="revealKicker"></p>
+    <div class="reveal-art" id="revealArt"></div>
+    <h2 id="revealName"></h2>
+    <p class="meta" id="revealMeta"></p>
+    <button type="button" id="revealOk" class="btn primary block">收下</button>
+  </div>
+</div>
+<script src="js/trees.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
