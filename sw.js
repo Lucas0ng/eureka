@@ -1,4 +1,4 @@
-const CACHE = 'eureka-v11';
+const CACHE = 'eureka-v12';
 const FILES = [
   './',
   'index.html',

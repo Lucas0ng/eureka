@@ -64,19 +64,23 @@
     </div>
   </section>
 
-  <section class="card composer">
+  <section class="card composer" id="composer">
     <label class="sr" for="input">记下念头</label>
-    <textarea id="input" rows="2" placeholder="突然想做什么？写下来……" enterkeyhint="done"></textarea>
-    <div class="ests" id="ests" role="group" aria-label="大概需要多久">
-      <button type="button" data-m="5" aria-pressed="false">5 分钟</button>
-      <button type="button" data-m="30" aria-pressed="false">30 分钟</button>
-      <button type="button" data-m="60" aria-pressed="false">1 小时+</button>
+    <textarea id="input" rows="1" placeholder="突然想做什么？写下来……" enterkeyhint="done"></textarea>
+    <div class="composer-more" id="composerMore" inert>
+      <div class="composer-more-inner">
+        <div class="ests" id="ests" role="group" aria-label="大概需要多久">
+          <button type="button" data-m="5" aria-pressed="false">5 分钟</button>
+          <button type="button" data-m="30" aria-pressed="false">30 分钟</button>
+          <button type="button" data-m="60" aria-pressed="false">1 小时+</button>
+        </div>
+        <div class="pair">
+          <button type="button" class="btn now" data-add="now">立刻去做</button>
+          <button type="button" class="btn long" data-add="long">长期想做</button>
+        </div>
+        <p class="caption">回车保存。选了 1 小时以上，会放进长期。</p>
+      </div>
     </div>
-    <div class="pair">
-      <button type="button" class="btn now" data-add="now">立刻去做</button>
-      <button type="button" class="btn long" data-add="long">长期想做</button>
-    </div>
-    <p class="caption">回车保存。选了 1 小时以上，会放进长期。</p>
   </section>
 
   <div class="seg" id="segs" role="tablist" aria-label="清单">
@@ -135,6 +139,10 @@
         </div>
       </div>
       <div class="grove-world" id="groveWorld"></div>
+    </div>
+    <div class="grove-pager" id="grovePager" hidden>
+      <div class="grove-dots" id="groveDots" role="group" aria-label="选择小岛"></div>
+      <p class="grove-page-label" id="grovePageLabel" aria-live="polite"></p>
     </div>
   </section>
   <section class="card">
@@ -253,10 +261,6 @@
 </svg>
 <template id="treeTpl">
   <svg class="tree-svg" viewBox="0 0 64 80" aria-hidden="true">
-    <g class="stage stage-seed">
-      <ellipse class="soil" cx="32" cy="74" rx="14" ry="3"></ellipse>
-      <path class="trunk" d="M32 64c3.2 0 6 2.2 6 5.2S35.2 75 32 75s-6-2.4-6-5.8S28.8 64 32 64z"></path>
-    </g>
     <g class="stage stage-sprout">
       <ellipse class="soil" cx="32" cy="74" rx="14" ry="3"></ellipse>
       <path class="stem" d="M32 74 V46"></path>
@@ -289,7 +293,7 @@
     <span>收集 <b id="codexPageFrac">0/30</b></span>
     <div class="codex-track" aria-hidden="true"><i id="codexPageFill"></i></div>
   </div>
-  <div class="codex-grid" id="codexGrid"></div>
+  <div class="codex-groups" id="codexGrid"></div>
 </div>
 <div id="reveal" class="reveal" hidden>
   <div class="reveal-card" id="revealCard">
