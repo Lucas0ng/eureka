@@ -6,7 +6,28 @@
    Backup file: { items, st } — old backups use this shape and must restore. */
 const ITEM_KEY = 'eureka-items-v1';
 const STAT_KEY = 'eureka-stats-v1';
-const LV = ['🌱 新芽', '🌿 小苗', '🌳 小树', '⭐ 行动派', '🔥 专注达人', '🚀 执行王', '👑 Eureka 大师'];
+const LEVELS = [
+  { name: '新芽', icon: 'sprout' },
+  { name: '小苗', icon: 'sapling' },
+  { name: '小树', icon: 'tree' },
+  { name: '行动派', icon: 'spark' },
+  { name: '专注达人', icon: 'flame' },
+  { name: '执行王', icon: 'arrow' },
+  { name: 'Eureka 大师', icon: 'e' }
+];
+function levelMeta(l) {
+  return LEVELS[Math.min(Math.max(l, 0), LEVELS.length - 1)];
+}
+function icon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('class', 'ico');
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', '#i-' + name);
+  svg.appendChild(use);
+  return svg;
+}
 const RING_C = 2 * Math.PI * 46;
 const DOC_TITLE = 'Eureka！灵感记事本';
 
@@ -165,7 +186,7 @@ function award(n, why) {
   saveS();
   const after = level(st.pts).l;
   if (after > before) {
-    toast('升级了！' + LV[Math.min(after, LV.length - 1)]);
+    toast('升级了！' + levelMeta(after).name);
     vibrate(200);
   } else if (n > 0) toast('+' + n + ' 分' + (why ? ' ' + why : ''));
 }
@@ -223,15 +244,23 @@ function homeSub() {
   if (openCat('long').length) return '长期的事，可以先拆成 5 分钟';
   return '今天先到这里。新的念头，随时记下来';
 }
-function pillLabel() {
+function renderPill() {
   const s = streak();
-  if (s > 0) return '🔥 ' + s;
-  return 'Lv.' + (level(st.pts).l + 1);
+  const pill = $('pill');
+  pill.replaceChildren();
+  if (s > 0) {
+    pill.appendChild(icon('flame'));
+    pill.appendChild(document.createTextNode(String(s)));
+  } else {
+    pill.textContent = 'Lv.' + (level(st.pts).l + 1);
+  }
 }
 
 function renderStats() {
   const L = level(st.pts);
-  $('lv').textContent = 'Lv.' + (L.l + 1) + ' ' + LV[Math.min(L.l, LV.length - 1)];
+  const meta = levelMeta(L.l);
+  const lv = $('lv');
+  lv.replaceChildren(document.createTextNode('Lv.' + (L.l + 1) + ' '), icon(meta.icon), document.createTextNode(' ' + meta.name));
   $('pts').textContent = st.pts + ' 分';
   const pct = Math.max(0, Math.min(100, ((st.pts - L.acc) / L.need) * 100));
   $('barFill').style.width = pct + '%';
@@ -274,19 +303,20 @@ function renderStats() {
   const done = items.filter(i => i && i.done).length;
   const dl = items.filter(i => i && i.done && i.cat === 'long').length;
   const badges = [
-    ['✍️ 第一条念头', items.length >= 1],
-    ['✅ 完成第一件', done >= 1],
-    ['🔟 完成 10 件', done >= 10],
-    ['🌳 完成长期目标', dl >= 1],
-    ['⏱ 第一次专注', (st.focus || 0) >= 1],
-    ['🧘 专注 10 次', (st.focus || 0) >= 10],
-    ['🔥 连续 3 天', streak() >= 3],
-    ['🏆 连续 7 天', streak() >= 7]
+    ['spark', '第一条念头', items.length >= 1],
+    ['check', '完成第一件', done >= 1],
+    ['ten', '完成 10 件', done >= 10],
+    ['tree', '完成长期目标', dl >= 1],
+    ['timer', '第一次专注', (st.focus || 0) >= 1],
+    ['timer-check', '专注 10 次', (st.focus || 0) >= 10],
+    ['flame', '连续 3 天', streak() >= 3],
+    ['crown', '连续 7 天', streak() >= 7]
   ];
   const box = $('badges');
   box.replaceChildren();
-  badges.forEach(([name, got]) => {
-    const b = el('span', 'badge' + (got ? ' got' : ''), name);
+  badges.forEach(([glyph, name, got]) => {
+    const b = el('span', 'badge' + (got ? ' got' : ''));
+    b.append(icon(glyph), document.createTextNode(name));
     box.appendChild(b);
   });
 }
@@ -295,7 +325,7 @@ function renderHome() {
   if (!items.some(i => i && i.id === pickId && !i.done)) choose();
   const p = items.find(i => i && i.id === pickId && !i.done);
   $('homeSub').textContent = homeSub();
-  $('pill').textContent = pillLabel();
+  renderPill();
   const s = streak();
   $('pill').setAttribute('aria-label', s > 0 ? '连续 ' + s + ' 天，查看进度' : '查看进度');
   const pool = openCat('now').length ? openCat('now') : openCat('long');
@@ -679,7 +709,7 @@ function finishSession() {
   setDocTitle();
   confetti();
   vibrate([300, 150, 300]);
-  if (after > before) toast('升级了！' + LV[Math.min(after, LV.length - 1)]);
+  if (after > before) toast('升级了！' + levelMeta(after).name);
   else toast('专注完成 +' + gained + ' 分');
   render();
 }
