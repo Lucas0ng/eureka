@@ -4,10 +4,14 @@
    eureka-items-v1: [{ id, text, cat:'now'|'long', done, t, m?, dt? }]
    eureka-stats-v1: { pts, days:{'Y-M-D': n}, focus, wilt? }
    eureka-forest-v1: { planted:[], migrated, focusBonus }
-   Backup file: { items, st, forest? } — old backups without forest still restore. */
+   eureka-session-v1: { focusId, mode:'focus'|'break', len, endAt, left? } — the running
+     (endAt > 0) or paused (endAt 0, left in seconds) timer; removed on exit/finish. Not in backups.
+   Backup file: { items, st, forest? } — old backups without forest still restore.
+   st.wilt is no longer written; old values are left alone. */
 const ITEM_KEY = 'eureka-items-v1';
 const STAT_KEY = 'eureka-stats-v1';
 const FOREST_KEY = 'eureka-forest-v1';
+const SESSION_KEY = 'eureka-session-v1';
 const ODDS = {
   normal: [['common', 58], ['rare', 27], ['epic', 12], ['legendary', 3]],
   boosted: [['common', 34], ['rare', 36], ['epic', 20], ['legendary', 10]]
@@ -74,7 +78,6 @@ let endAt = 0;
 let tick = null;
 let running = false;
 let started = false;
-let wilted = false;
 let locked = false;
 let lockY = 0;
 let sheetTimer = 0;
@@ -97,17 +100,47 @@ function normalizeItems() {
 ensureStats();
 normalizeItems();
 
+/* Backup items: keep objects with string text; cat/done coerced; missing ids filled in. */
+function sanitizeItems(raw) {
+  let n = 0;
+  return raw.filter(i => i && typeof i === 'object' && !Array.isArray(i) && typeof i.text === 'string').map(i => {
+    const it = Object.assign({}, i);
+    if (it.id == null || it.id === '') {
+      n += 1;
+      it.id = Date.now() + '' + n + Math.random();
+    } else it.id = String(it.id);
+    it.cat = it.cat === 'long' ? 'long' : 'now';
+    it.done = it.done === true || it.done === 'true' || it.done === 1;
+    return it;
+  });
+}
+
+let storeWarned = false;
+function store(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (e) {
+    if (!storeWarned) {
+      storeWarned = true;
+      setTimeout(() => toast('存不下了，先备份一下数据'), 0);
+    }
+    return false;
+  }
+}
 function save() {
-  localStorage.setItem(ITEM_KEY, JSON.stringify(items));
+  store(ITEM_KEY, items);
 }
 function saveS() {
-  localStorage.setItem(STAT_KEY, JSON.stringify(st));
+  store(STAT_KEY, st);
 }
 
 let forest = loadRaw(FOREST_KEY);
 let pendingReveal = null;
 let revealTimer = 0;
 let scrollGrove = false;
+let groveDirty = true;
+let groveBuiltW = 0;
 const TREES = window.EUREKA_TREES || [];
 const TREE_BY_ID = {};
 TREES.forEach(t => { TREE_BY_ID[t.id] = t; });
@@ -118,7 +151,7 @@ function ensureForest() {
   if (typeof forest.focusBonus !== 'number') forest.focusBonus = 0;
 }
 function saveForest() {
-  localStorage.setItem(FOREST_KEY, JSON.stringify(forest));
+  store(FOREST_KEY, forest);
 }
 function treeById(id) { return TREE_BY_ID[id] || null; }
 function applyForestBackup(raw) {
@@ -137,6 +170,7 @@ function applyForestBackup(raw) {
     migrated: true,
     focusBonus: Number(raw.focusBonus) || 0
   };
+  groveDirty = true;
   saveForest();
 }
 function rollTier(boosted) {
@@ -180,6 +214,7 @@ function plantForTask(it) {
   forest.planted.push(planted);
   saveForest();
   scrollGrove = true;
+  groveDirty = true;
   return { tree, planted, boosted };
 }
 function migrateForest() {
@@ -193,44 +228,27 @@ function migrateForest() {
     if (tree) forest.planted.push(makePlant(done[i].id, tree));
   }
   forest.migrated = true;
+  groveDirty = true;
   saveForest();
+}
+/* A backup without a forest: keep only trees whose task came back, then plant for
+   completed tasks the same way first launch does. */
+function reconcileForest() {
+  ensureForest();
+  const ids = {};
+  items.forEach(i => { if (i && i.id != null) ids[String(i.id)] = true; });
+  forest.planted = forest.planted.filter(p => p && p.taskId && ids[p.taskId]);
+  forest.migrated = false;
+  migrateForest();
 }
 function reduceMotion() {
   return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 let svgUid = 0;
-function rarityBack() {
-  return '';
-}
-function rarityFront(tree) {
-  if (!tree || tree.tier === 'common') return '';
-  if (tree.style === 'pixel') {
-    const gem = tree.tier === 'rare' ? '#7ec8e8' : tree.tier === 'epic' ? '#c9a0e0' : '#f0d060';
-    let s = '<g shape-rendering="crispEdges"><rect x="60" y="86" width="8" height="8" fill="' + gem + '"/><rect x="62" y="84" width="4" height="4" fill="#fff"/>';
-    if (tree.tier !== 'rare') {
-      s += '<rect x="8" y="10" width="4" height="4" fill="' + gem + '"/><rect x="68" y="14" width="4" height="4" fill="' + gem + '"/>';
-    }
-    if (tree.tier === 'legendary') s += '<rect x="36" y="2" width="8" height="4" fill="#f0d060"/>';
-    return s + '</g>';
-  }
-  if (tree.tier === 'rare') {
-    return '<ellipse cx="40" cy="100" rx="16" ry="3.1" fill="none" stroke="#3d7ea6" stroke-width="1.25"/>' +
-      '<path d="M63 74 l2.1 1.1 -2.1 1.1 -1.1 2.1 -1.1-2.1 -2.1-1.1 2.1-1.1 1.1-2.1z" fill="#e7f6ff" stroke="#3d7ea6" stroke-width=".55"/>';
-  }
-  if (tree.tier === 'epic') {
-    return '<ellipse cx="40" cy="100" rx="17" ry="3.2" fill="none" stroke="#9b6bb8" stroke-width="1.45"/>' +
-      '<g fill="#f6e8ff" stroke="#7a4e98" stroke-width=".45"><path d="M14 20 l1.3 2.8 h3 l-2.4 1.8.9 2.9 -2.8-2 -2.8 2 .9-2.9 -2.4-1.8 h3z"/>' +
-      '<path d="M66 16 l1.1 2.4 h2.6 l-2.1 1.5.8 2.4 -2.4-1.7 -2.4 1.7.8-2.4 -2.1-1.5 h2.6z"/></g>';
-  }
-  return '<ellipse cx="40" cy="100" rx="18" ry="3.4" fill="none" stroke="#e0b44a" stroke-width="1.6"/>' +
-    '<g fill="#fff8dc" stroke="#c8922a" stroke-width=".5"><path d="M40 5 l1.5 3.6 h3.8 l-3 2.2 1.1 3.6 L40 12.6 36.6 14.4 l1.1-3.6 -3-2.2 h3.8z"/>' +
-    '<path d="M15 15 l1 2.4 h2.6 l-2.1 1.5.8 2.4 -2.3-1.6 -2.3 1.6.8-2.4 -2.1-1.5 h2.6z"/>' +
-    '<path d="M65 13 l1 2.4 h2.6 l-2.1 1.5.8 2.4 -2.3-1.6 -2.3 1.6.8-2.4 -2.1-1.5 h2.6z"/></g>';
-}
 function renderTreeSvg(tree) {
   svgUid += 1;
   const uid = 's' + svgUid;
-  let body = rarityBack(tree) + (tree.svg || '') + rarityFront(tree);
+  let body = tree.svg || '';
   body = body.replace(/\bid="([^"]+)"/g, function (_, id) { return 'id="' + uid + id + '"'; });
   body = body.replace(/url\(#([^)]+)\)/g, function (_, id) { return 'url(#' + uid + id + ')'; });
   const holder = document.createElement('template');
@@ -238,37 +256,48 @@ function renderTreeSvg(tree) {
   return holder.content.firstElementChild;
 }
 const GROVE_H = 352;
-const DEPTHS = [
-  { bottom: 124, scale: 0.9, z: 3, stagger: 22 },
-  { bottom: 64, scale: 1, z: 5, stagger: 48 },
-  { bottom: 178, scale: 0.76, z: 1, stagger: -6 }
+const ISLE_CAP = 12;
+/* Depth rows on the grass ellipse: v is -1 at the back rim, +1 at the front rim. */
+const ISLE_ROWS = [
+  { v: -0.62, s: 0.54 },
+  { v: -0.22, s: 0.6 },
+  { v: 0.2, s: 0.66 },
+  { v: 0.58, s: 0.72 }
+];
+/* Twelve hand-tuned slots [u, row] in planting order; u is -1..1 across the grass.
+   The middle fills first so a young island looks centred; rows alternate their columns
+   so neighbouring trunks never share a spot. */
+const ISLE_SLOTS = [
+  [0.02, 2], [-0.2, 1], [0.24, 1], [-0.44, 2], [0.48, 2], [0.06, 0],
+  [-0.22, 3], [0.26, 3], [-0.66, 1], [0.68, 1], [-0.34, 0], [0.44, 0]
 ];
 const TIER_SCALE = { common: 0.98, rare: 1, epic: 1.03, legendary: 1.06 };
-function layoutSpots(plants) {
-  const measured = ($('grove') && $('grove').clientWidth) || 0;
-  const viewW = measured || 320;
-  let maxX = 120;
-  const spots = plants.map((p, i) => {
-    const spec = treeById(p.treeId);
-    const d = DEPTHS[i % 3];
-    const col = Math.floor(i / 3);
-    const tierS = spec ? (TIER_SCALE[spec.tier] || 1) : 1;
-    const raw = Number(p.scale) || 1;
-    const plantScale = 1 + (raw - 1) * 0.28;
-    const jitter = Number(p.jitter) || 0;
-    const x = 112 + col * 84 + d.stagger + jitter * 0.15;
-    const scale = Math.max(0.7, Math.min(1.1, d.scale * plantScale * tierS));
-    if (x > maxX) maxX = x;
-    return {
-      x: x,
-      bottom: d.bottom + (Number(p.y) || 0) * 0.2,
-      scale: scale,
-      z: d.z * 100 + col,
-      flip: !!p.flip
-    };
-  });
-  const natural = Math.ceil(maxX + 124);
-  return { width: Math.max(viewW, natural), spots: spots, measured: measured };
+function clampN(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
+function isleGeom(w, h) {
+  const rx = Math.max(120, w * 0.44);
+  const ry = h * 0.2;
+  const cy = h * 0.66;
+  return { cx: w / 2, cy: cy, rx: rx, ry: ry, gx: w / 2, gy: cy - 4, grx: rx * 0.95, gry: ry - 1 };
+}
+/* Where plant i (0-based within its island) stands. Per-plant jitter/y/scale only nudge it,
+   and the point is pulled back inside 0.84 of the grass radius so trunks never leave the grass. */
+function isleSpot(p, i, g) {
+  const slot = ISLE_SLOTS[i % ISLE_CAP];
+  const row = ISLE_ROWS[slot[1]];
+  const spec = treeById(p.treeId);
+  let u = slot[0] + clampN(Number(p.jitter) || 0, -7, 7) * 0.005;
+  let v = row.v + (clampN(Number(p.y) || 0, 0, 7) - 3.5) * 0.01;
+  const r = Math.sqrt(u * u + v * v);
+  if (r > 0.84) { u *= 0.84 / r; v *= 0.84 / r; }
+  const tierS = spec ? (TIER_SCALE[spec.tier] || 1) : 1;
+  const plantScale = 1 + (clampN(Number(p.scale) || 1, 0.8, 1.2) - 1) * 0.28;
+  return {
+    x: g.gx + u * g.grx,
+    y: g.gy + v * g.gry,
+    scale: clampN(row.s * plantScale * tierS, 0.5, 0.82),
+    z: 10 + Math.round((v + 1) * 40),
+    flip: !!p.flip
+  };
 }
 function isleFlower(x, y, color) {
   return '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')">' +
@@ -290,20 +319,25 @@ function isleMushroom(x, y, s) {
     '<ellipse cx="-1.8" cy="-1.8" rx="2" ry=".7" fill="#fff" opacity=".6"/>' +
     '</g>';
 }
+/* One island drawn at exactly one page width. anchors: x of this island's trunks, so
+   small flowers/stones/mushrooms stay out from under them. */
 function buildIsland(w, h, anchors, empty) {
-  const cx = w / 2;
-  const cy = h * 0.66;
-  const rx = Math.max(120, w * 0.44);
-  const ry = h * 0.2;
+  const g = isleGeom(w, h);
+  const cx = g.cx;
+  const cy = g.cy;
+  const rx = g.rx;
+  const ry = g.ry;
+  svgUid += 1;
+  const shadeId = 'cliffShade' + svgUid;
   const parts = [];
-  parts.push('<defs><linearGradient id="cliffShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--isle-sand)"/><stop offset=".4" stop-color="var(--isle-cliff)"/><stop offset="1" stop-color="var(--isle-cliff-deep)"/></linearGradient></defs>');
+  parts.push('<defs><linearGradient id="' + shadeId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--isle-sand)"/><stop offset=".4" stop-color="var(--isle-cliff)"/><stop offset="1" stop-color="var(--isle-cliff-deep)"/></linearGradient></defs>');
   parts.push('<ellipse cx="' + cx + '" cy="' + (cy + ry * 0.85) + '" rx="' + (rx * 0.78) + '" ry="' + (ry * 0.34) + '" fill="var(--isle-reflect)" opacity=".9"/>');
   parts.push('<ellipse cx="' + (w * 0.36) + '" cy="' + (h * 0.9) + '" rx="' + Math.min(78, w * 0.18) + '" ry="6" fill="var(--isle-mist)"/>');
   parts.push('<ellipse cx="' + (w * 0.62) + '" cy="' + (h * 0.935) + '" rx="' + Math.min(96, w * 0.22) + '" ry="5" fill="var(--isle-mist)" opacity=".75"/>');
   parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 22) + '" rx="' + (rx * 0.86) + '" ry="' + (ry * 0.5) + '" fill="var(--isle-shadow)"/>');
-  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 18) + '" rx="' + (rx * 1.02) + '" ry="' + (ry + 16) + '" fill="url(#cliffShade)"/>');
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 18) + '" rx="' + (rx * 1.02) + '" ry="' + (ry + 16) + '" fill="url(#' + shadeId + ')"/>');
   const lip = cy + ry - 6;
-  const rootN = Math.max(6, Math.round(w / 62));
+  const rootN = 6;
   for (let i = 0; i < rootN; i++) {
     const x = w * (0.14 + (0.72 * i) / Math.max(1, rootN - 1));
     const drop = 16 + (i % 3) * 6;
@@ -313,7 +347,7 @@ function buildIsland(w, h, anchors, empty) {
       parts.push('<path d="M' + (x + 7).toFixed(1) + ' ' + (lip + 1).toFixed(1) + ' q 2 7 -1 13" fill="none" stroke="var(--isle-moss)" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>');
     }
   }
-  const rockN = Math.max(4, Math.round(w / 88));
+  const rockN = 4;
   for (let i = 0; i < rockN; i++) {
     const x = w * (0.18 + (0.64 * i) / Math.max(1, rockN - 1));
     const y = cy + ry + 8 + (i % 2) * 5;
@@ -339,7 +373,7 @@ function buildIsland(w, h, anchors, empty) {
   }
   function clear(x) {
     if (empty) return true;
-    return !anchors.some(a => Math.abs(a - x) < 32);
+    return !anchors.some(a => Math.abs(a - x) < 20);
   }
   [[w * 0.07, cy + 4], [w * 0.94, cy + 8]].forEach(p => {
     const x = p[0];
@@ -423,61 +457,110 @@ function renderGroveStats() {
     chips.appendChild(chip);
   });
 }
-function renderGrove() {
-  ensureForest();
-  renderGroveStats();
+function groveTreeNode(p, spot) {
+  const spec = treeById(p.treeId);
+  const node = document.createElement('button');
+  node.type = 'button';
+  node.className = 'grove-tree tier-' + spec.tier;
+  node.dataset.pid = p.id;
+  node.setAttribute('aria-label', spec.name + '，' + (window.EUREKA_TIER_NAME[spec.tier] || '') + '，' + (window.EUREKA_STYLE_NAME[spec.style] || ''));
+  node.style.left = (spot.x - 37).toFixed(1) + 'px';
+  node.style.bottom = (GROVE_H - spot.y - 5 * spot.scale).toFixed(1) + 'px';
+  node.style.zIndex = String(spot.z);
+  node.style.transform = 'scale(' + (spot.flip ? -spot.scale : spot.scale) + ',' + spot.scale + ')';
+  const pit = document.createElement('i');
+  pit.className = 'pit';
+  pit.setAttribute('aria-hidden', 'true');
+  const contact = document.createElement('i');
+  contact.className = 'contact';
+  contact.setAttribute('aria-hidden', 'true');
+  const sway = document.createElement('span');
+  sway.className = 'sway';
+  sway.appendChild(renderTreeSvg(spec));
+  node.appendChild(contact);
+  node.appendChild(pit);
+  node.appendChild(sway);
+  return node;
+}
+function grovePage() {
   const world = $('groveWorld');
-  world.replaceChildren();
-  const plants = forest.planted.filter(p => treeById(p.treeId));
-  const layout = layoutSpots(plants);
-  world.style.width = layout.width + 'px';
-  world.dataset.viewW = String(layout.measured);
-  const justId = scrollGrove && plants.length ? plants[plants.length - 1].id : '';
-  world.appendChild(buildIsland(layout.width, GROVE_H, layout.spots.map(s => s.x), !plants.length));
-  if (!plants.length) {
-    const empty = document.createElement('div');
-    empty.className = 'grove-empty';
-    const note = document.createElement('p');
-    note.textContent = '完成一件事，这里会长出第一棵树。';
-    empty.appendChild(note);
-    world.appendChild(empty);
-  }
-  plants.forEach((p, i) => {
-    const spec = treeById(p.treeId);
-    const spot = layout.spots[i];
-    const node = document.createElement('button');
-    node.type = 'button';
-    node.className = 'grove-tree tier-' + spec.tier;
-    node.dataset.pid = p.id;
-    node.setAttribute('aria-label', spec.name + '，' + (window.EUREKA_TIER_NAME[spec.tier] || '') + '，' + (window.EUREKA_STYLE_NAME[spec.style] || ''));
-    node.style.left = (spot.x - 37) + 'px';
-    node.style.bottom = spot.bottom + 'px';
-    node.style.zIndex = String(spot.z);
-    node.style.transform = 'scale(' + (spot.flip ? -spot.scale : spot.scale) + ',' + spot.scale + ')';
-    if (p.id === justId && !reduceMotion()) node.classList.add('just-planted');
-    const pit = document.createElement('i');
-    pit.className = 'pit';
-    pit.setAttribute('aria-hidden', 'true');
-    const contact = document.createElement('i');
-    contact.className = 'contact';
-    contact.setAttribute('aria-hidden', 'true');
-    const sway = document.createElement('span');
-    sway.className = 'sway';
-    sway.appendChild(renderTreeSvg(spec));
-    node.appendChild(contact);
-    node.appendChild(pit);
-    node.appendChild(sway);
-    world.appendChild(node);
+  const w = world.clientWidth;
+  return w ? Math.round(world.scrollLeft / w) : 0;
+}
+function syncGrovePager() {
+  const world = $('groveWorld');
+  const total = world.children.length;
+  const pager = $('grovePager');
+  pager.hidden = total < 2;
+  if (total < 2) return;
+  const idx = Math.min(total - 1, grovePage());
+  if (pager.dataset.idx === String(idx) && pager.dataset.total === String(total)) return;
+  pager.dataset.idx = String(idx);
+  pager.dataset.total = String(total);
+  $('grovePageLabel').textContent = '第 ' + (idx + 1) + ' 座岛 · 共 ' + total + ' 座';
+  $('groveDots').querySelectorAll('button').forEach((b, i) => {
+    if (i === idx) b.setAttribute('aria-current', 'true');
+    else b.removeAttribute('aria-current');
   });
-  if (scrollGrove) {
-    scrollGrove = false;
-    requestAnimationFrame(() => {
-      const grove = $('grove');
-      const last = world.querySelector('.grove-tree:last-of-type');
-      if (!last) return;
-      grove.scrollLeft = Math.max(0, last.offsetLeft - grove.clientWidth * 0.45);
+}
+function showGrovePage(idx, smooth) {
+  const world = $('groveWorld');
+  const left = idx * world.clientWidth;
+  if (smooth && !reduceMotion() && world.scrollTo) world.scrollTo({ left: left, behavior: 'smooth' });
+  else world.scrollLeft = left;
+  syncGrovePager();
+}
+/* Build only while the stats view is on screen; plant/migrate/restore and width changes mark it stale. */
+function maybeRenderGrove() {
+  if (view !== 'stats') return;
+  const w = $('groveWorld').clientWidth;
+  if (!w) return;
+  if (groveDirty) renderGrove(false);
+  else if (w !== groveBuiltW) renderGrove(true);
+}
+function renderGrove(keepPage) {
+  ensureForest();
+  const world = $('groveWorld');
+  const w = world.clientWidth || 309;
+  const prevPage = keepPage ? grovePage() : -1;
+  const plants = forest.planted.filter(p => treeById(p.treeId));
+  const g = isleGeom(w, GROVE_H);
+  const justId = scrollGrove && plants.length ? plants[plants.length - 1].id : '';
+  const pageCount = Math.max(1, Math.ceil(plants.length / ISLE_CAP));
+  const pages = [];
+  for (let n = 0; n < pageCount; n++) {
+    const group = plants.slice(n * ISLE_CAP, (n + 1) * ISLE_CAP);
+    const spots = group.map((p, i) => isleSpot(p, i, g));
+    const page = el('div', 'isle-page');
+    page.setAttribute('role', 'group');
+    page.setAttribute('aria-label', '第 ' + (n + 1) + ' 座岛');
+    page.appendChild(buildIsland(w, GROVE_H, spots.map(s => s.x), !group.length));
+    if (!group.length) {
+      const empty = el('div', 'grove-empty');
+      empty.appendChild(el('p', null, '完成一件事，这里会长出第一棵树。'));
+      page.appendChild(empty);
+    }
+    group.forEach((p, i) => {
+      const node = groveTreeNode(p, spots[i]);
+      if (p.id === justId && !reduceMotion()) node.classList.add('just-planted');
+      page.appendChild(node);
     });
+    pages.push(page);
   }
+  world.replaceChildren.apply(world, pages);
+  const dots = $('groveDots');
+  dots.replaceChildren();
+  for (let n = 0; n < pageCount; n++) {
+    const dot = el('button', 'grove-dot');
+    dot.dataset.page = String(n);
+    dot.setAttribute('aria-label', '第 ' + (n + 1) + ' 座岛');
+    dots.appendChild(dot);
+  }
+  $('grovePager').dataset.idx = '';
+  groveDirty = false;
+  groveBuiltW = w;
+  scrollGrove = false;
+  showGrovePage(prevPage >= 0 ? Math.min(prevPage, pageCount - 1) : pageCount - 1, false);
 }
 function renderCodex() {
   ensureForest();
@@ -489,22 +572,33 @@ function renderCodex() {
     $('codexPageFrac').textContent = found + '/30';
     $('codexPageFill').style.width = (found / 30 * 100) + '%';
   }
-  const grid = $('codexGrid');
-  grid.replaceChildren();
-  TREES.forEach(tree => {
-    const count = owned[tree.id] || 0;
-    const card = el('div', 'codex-card' + (count ? '' : ' locked'));
-    card.dataset.tier = tree.tier;
-    const art = el('div', 'art');
-    const svg = renderTreeSvg(tree);
-    art.appendChild(svg);
-    card.appendChild(art);
-    card.appendChild(el('div', 'nm', count ? tree.name : '???'));
-    const tier = el('span', 'tier tier-' + tree.tier, window.EUREKA_TIER_NAME[tree.tier] || tree.tier);
-    card.appendChild(tier);
-    const styleName = count ? (window.EUREKA_STYLE_NAME[tree.style] || '') : '';
-    card.appendChild(el('div', 'subline', (styleName ? styleName + ' · ' : '') + '拥有 ' + count));
-    grid.appendChild(card);
+  const box = $('codexGrid');
+  box.replaceChildren();
+  ['common', 'rare', 'epic', 'legendary'].forEach(tierId => {
+    const list = TREES.filter(t => t.tier === tierId);
+    if (!list.length) return;
+    const tierName = window.EUREKA_TIER_NAME[tierId] || tierId;
+    const group = el('section', 'codex-group tier-' + tierId);
+    const head = el('h3', 'codex-head');
+    head.appendChild(el('span', 'codex-head-name', tierName));
+    head.appendChild(el('span', 'codex-head-frac', list.filter(t => owned[t.id]).length + '/' + list.length));
+    group.appendChild(head);
+    const grid = el('div', 'codex-grid');
+    list.forEach(tree => {
+      const count = owned[tree.id] || 0;
+      const card = el('div', 'codex-card' + (count ? '' : ' locked'));
+      card.dataset.tier = tree.tier;
+      const art = el('div', 'art');
+      art.appendChild(renderTreeSvg(tree));
+      card.appendChild(art);
+      card.appendChild(el('div', 'nm', count ? tree.name : '???'));
+      card.appendChild(el('span', 'tier tier-' + tree.tier, tierName));
+      const styleName = count ? (window.EUREKA_STYLE_NAME[tree.style] || '') : '';
+      card.appendChild(el('div', 'subline', (styleName ? styleName + ' · ' : '') + '拥有 ' + count));
+      grid.appendChild(card);
+    });
+    group.appendChild(grid);
+    box.appendChild(group);
   });
 }
 function openCodex() {
@@ -634,7 +728,9 @@ function streak() {
   return n;
 }
 function vibrate(pattern) {
-  if (navigator.vibrate) navigator.vibrate(pattern);
+  if (!navigator.vibrate) return;
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+  navigator.vibrate(pattern);
 }
 function fmt(s) {
   s = Math.max(0, s | 0);
@@ -684,12 +780,13 @@ function confetti() {
     setTimeout(() => c.remove(), 1600);
   }
 }
-function award(n, why) {
+/* at: the item's completion time (dt). The day counter of that day moves, not always today's. */
+function award(n, why, at) {
   const before = level(st.pts).l;
   st.pts = Math.max(0, st.pts + n);
   if (n > 0) {
-    const k = dkey();
-    st.days[k] = (st.days[k] || 0) + 1;
+    const k = dkey(at ? new Date(at) : new Date());
+    st.days[k] = (Number(st.days[k]) || 0) + 1;
   }
   saveS();
   const after = level(st.pts).l;
@@ -698,10 +795,14 @@ function award(n, why) {
     vibrate(200);
   } else if (n > 0) toast('+' + n + ' 分' + (why ? ' ' + why : ''));
 }
-function unaward(n) {
+function unaward(n, at) {
   st.pts = Math.max(0, st.pts - n);
-  const k = dkey();
-  if (st.days[k]) st.days[k]--;
+  if (at) {
+    const k = dkey(new Date(at));
+    const rest = (Number(st.days[k]) || 0) - 1;
+    if (rest > 0) st.days[k] = rest;
+    else delete st.days[k];
+  }
   saveS();
 }
 
@@ -736,11 +837,7 @@ function setView(next) {
     else b.removeAttribute('aria-current');
   });
   if (!locked) window.scrollTo(0, 0);
-  if (next === 'stats') {
-    const grove = $('grove');
-    const world = $('groveWorld');
-    if (grove && world && String(grove.clientWidth) !== (world.dataset.viewW || '')) renderGrove();
-  }
+  if (next === 'stats') maybeRenderGrove();
 }
 
 function choose() {
@@ -783,7 +880,9 @@ function renderStats() {
   $('toNext').textContent = '再得 ' + (L.acc + L.need - st.pts) + ' 分升级';
   $('nToday').textContent = st.days[dkey()] || 0;
   $('nFocus').textContent = st.focus || 0;
-  renderGrove();
+  ensureForest();
+  renderGroveStats();
+  maybeRenderGrove();
 
   const done = items.filter(i => i && i.done).length;
   const dl = items.filter(i => i && i.done && i.cat === 'long').length;
@@ -932,6 +1031,27 @@ function render() {
   renderList();
 }
 
+/* Composer: just the textarea until it is focused or has text; then chips, add buttons, caption. */
+let composerHold = false;
+let composerTimer = 0;
+const INPUT_MAX_ROWS = 5;
+function growInput() {
+  const ta = $('input');
+  ta.style.height = 'auto';
+  const cs = getComputedStyle(ta);
+  const line = parseFloat(cs.lineHeight) || 23;
+  const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  const max = Math.ceil(line * INPUT_MAX_ROWS + pad);
+  const want = Math.max(Math.ceil(line + pad), ta.scrollHeight);
+  ta.style.height = Math.min(want, max) + 'px';
+  ta.style.overflowY = want > max ? 'auto' : 'hidden';
+}
+function syncComposer() {
+  const box = $('composer');
+  const open = composerHold || selM !== 0 || $('input').value !== '' || box.contains(document.activeElement);
+  box.classList.toggle('open', open);
+  $('composerMore').toggleAttribute('inert', !open);
+}
 function addItem(cat) {
   const v = $('input').value.trim();
   if (!v) { $('input').focus(); return; }
@@ -946,6 +1066,8 @@ function addItem(cat) {
   save();
   $('input').value = '';
   $('input').blur();
+  growInput();
+  syncComposer();
   tab = cat;
   render();
   toast(cat === 'now' ? '记下了，先回到手头的事' : '先放着，以后再做');
@@ -1094,6 +1216,74 @@ function stopTick() {
   if (tick) clearInterval(tick);
   tick = null;
 }
+
+/* Screen Wake Lock while a timer runs; silently skipped where unsupported. */
+let wakeLock = null;
+let wakePending = false;
+function holdWake() {
+  if (!running || wakeLock || wakePending || document.hidden) return;
+  if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+  wakePending = true;
+  navigator.wakeLock.request('screen').then(lock => {
+    wakePending = false;
+    if (!running) { lock.release().catch(() => {}); return; }
+    wakeLock = lock;
+    lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
+  }).catch(() => { wakePending = false; });
+}
+function dropWake() {
+  const lock = wakeLock;
+  wakeLock = null;
+  if (lock) lock.release().catch(() => {});
+}
+
+/* Soft chime. The AudioContext is created/resumed inside the tap on 开始, so iOS lets it play later. */
+let audioCtx = null;
+function primeAudio() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state !== 'running' && audioCtx.resume) audioCtx.resume().catch(() => {});
+    const buf = audioCtx.createBuffer(1, 1, 22050);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    src.start(0);
+  } catch (e) { /* no sound, that's fine */ }
+}
+function chime() {
+  if (!audioCtx) return;
+  try {
+    if (audioCtx.state !== 'running' && audioCtx.resume) audioCtx.resume().catch(() => {});
+    const t0 = audioCtx.currentTime + 0.05;
+    [[659.25, 0], [987.77, 0.22]].forEach(([freq, delay]) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t0 + delay);
+      gain.gain.exponentialRampToValueAtTime(0.16, t0 + delay + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + delay + 1.3);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t0 + delay);
+      osc.stop(t0 + delay + 1.35);
+    });
+  } catch (e) { /* ignore */ }
+}
+
+/* A running (endAt) or paused (left) session survives reload/kill. */
+function saveSession() {
+  if (!focusId || !started || (mode !== 'focus' && mode !== 'break')) { clearSession(); return; }
+  const s = { focusId: String(focusId), mode: mode, len: len, endAt: running ? endAt : 0 };
+  if (!running) s.left = left;
+  store(SESSION_KEY, s);
+}
+function clearSession() {
+  try { localStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
+}
+
 function syncFocusUI() {
   const root = $('focus');
   root.dataset.mode = mode;
@@ -1119,7 +1309,7 @@ function syncFocusUI() {
   } else if (mode === 'ask') {
     $('fHint').textContent = '';
   } else {
-    $('fPrimary').textContent = running ? '暂停' : (wilted ? '重新开始' : (started ? '继续' : '开始'));
+    $('fPrimary').textContent = running ? '暂停' : (started ? '继续' : '开始');
     $('fDone').textContent = '做完了';
     $('fHint').textContent = '只做这一件。想到别的，先放下，回头再记。';
   }
@@ -1134,51 +1324,63 @@ function markLens() {
 function plantProgress() {
   const p = 1 - left / (len * 60);
   setRing(p);
-  applyStage(wilted ? 'seed' : stageFor(Math.max(0, p)));
+  applyStage(stageFor(Math.max(0, p)));
 }
-function startTick() {
+function paintTimer() {
+  $('timer').textContent = fmt(left);
+  if (mode === 'break') {
+    setRing(1 - left / (5 * 60));
+    applyStage('tree');
+  } else plantProgress();
+  setDocTitle();
+}
+/* Runs off the wall clock (endAt), so a throttled or suspended interval only delays the repaint. */
+function runTick() {
   running = true;
   started = true;
-  wilted = false;
-  endAt = Date.now() + left * 1000;
   stopTick();
   tick = setInterval(step, 500);
   syncFocusUI();
-  setDocTitle();
-  if (mode === 'focus') plantProgress();
+  saveSession();
+  holdWake();
+  step();
+}
+function startTick() {
+  endAt = Date.now() + left * 1000;
+  runTick();
 }
 function pauseTimer() {
   left = Math.max(0, Math.round((endAt - Date.now()) / 1000));
   running = false;
   stopTick();
+  dropWake();
   syncFocusUI();
+  saveSession();
   setDocTitle();
 }
 function step() {
-  left = Math.round((endAt - Date.now()) / 1000);
-  if (left <= 0) {
-    left = 0;
-    $('timer').textContent = '00:00';
-    stopTick();
-    running = false;
-    if (mode === 'break') {
-      mode = 'ask';
-      setRing(1);
-      applyStage('tree');
-      syncFocusUI();
-      setDocTitle();
-      vibrate([200, 100, 200]);
-      return;
-    }
-    finishSession();
+  if (!running) return;
+  left = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+  if (left > 0) { paintTimer(); return; }
+  stopTick();
+  running = false;
+  dropWake();
+  $('timer').textContent = '00:00';
+  if (mode === 'break') {
+    mode = 'ask';
+    clearSession();
+    setRing(1);
+    applyStage('tree');
+    syncFocusUI();
+    setDocTitle();
+    chime();
+    vibrate([200, 100, 200]);
     return;
   }
-  $('timer').textContent = fmt(left);
-  setDocTitle();
-  if (mode === 'break') setRing(1 - left / (5 * 60));
-  else plantProgress();
+  finishSession();
 }
 function finishSession() {
+  if (mode !== 'focus') return;
   const gained = len >= 25 ? 15 : len >= 15 ? 10 : 5;
   const before = level(st.pts).l;
   st.focus = (Number(st.focus) || 0) + 1;
@@ -1186,6 +1388,9 @@ function finishSession() {
   saveS();
   grantFocusBonus();
   const after = level(st.pts).l;
+  stopTick();
+  dropWake();
+  clearSession();
   mode = 'done';
   running = false;
   left = 0;
@@ -1196,9 +1401,9 @@ function finishSession() {
   syncFocusUI();
   setDocTitle();
   confetti();
+  chime();
   vibrate([300, 150, 300]);
   if (after > before) toast('升级了！' + levelMeta(after).name);
-  else toast('专注完成 +' + gained + ' 分');
   render();
 }
 function startBreak() {
@@ -1216,9 +1421,10 @@ function startFocus(id, keepLen) {
   if (!$('sheet').hidden) closeSheet();
   focusId = id;
   stopTick();
+  dropWake();
+  clearSession();
   running = false;
   started = false;
-  wilted = false;
   mode = 'focus';
   if (!keepLen) len = durationFor(it);
   left = len * 60;
@@ -1238,6 +1444,8 @@ function startFocus(id, keepLen) {
 function endFocus() {
   stopTick();
   running = false;
+  dropWake();
+  clearSession();
   $('focus').classList.remove('show');
   $('focus').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('focusing');
@@ -1256,32 +1464,47 @@ function completeFocused() {
     it.done = true;
     it.dt = Date.now();
     save();
-    award(it.cat === 'long' ? 30 : 10, it.cat === 'long' ? '长期的也做到了' : '完成了一件');
+    award(it.cat === 'long' ? 30 : 10, it.cat === 'long' ? '长期的也做到了' : '完成了一件', it.dt);
     confetti();
     queueReveal(plantForTask(it));
   }
   endFocus();
 }
-function wilt() {
-  stopTick();
-  running = false;
-  started = false;
-  wilted = true;
-  mode = 'focus';
-  st.wilt = (st.wilt || 0) + 1;
-  saveS();
-  left = len * 60;
-  $('timer').textContent = fmt(left);
-  applyStage('seed');
-  setRing(0);
-  syncFocusUI();
-  setDocTitle();
-  toast('离开了一下，这轮专注中断了');
-}
 function onPrimary() {
+  primeAudio();
   if (mode === 'done') { startBreak(); return; }
   if (running) { pauseTimer(); return; }
   startTick();
+}
+/* Back on screen (unlock, tab switch, bfcache): catch up with the wall clock. */
+function onVisible() {
+  if (document.hidden || !running || !$('focus').classList.contains('show')) return;
+  step();
+  if (!running) return;
+  if (!tick) tick = setInterval(step, 500);
+  holdWake();
+}
+function restoreSession() {
+  const s = loadRaw(SESSION_KEY);
+  if (!s || typeof s !== 'object') return;
+  const it = items.find(i => i && String(i.id) === String(s.focusId) && !i.done);
+  const sLen = Number(s.len);
+  if (!it || (s.mode !== 'focus' && s.mode !== 'break') || !(sLen > 0 && sLen <= 180)) { clearSession(); return; }
+  len = sLen;
+  startFocus(it.id, true);
+  started = true;
+  mode = s.mode;
+  const total = mode === 'break' ? 5 * 60 : len * 60;
+  if (Number(s.endAt) > 0) {
+    endAt = Number(s.endAt);
+    runTick();
+    return;
+  }
+  left = clampN(Math.round(Number(s.left) || 0), 1, total);
+  running = false;
+  paintTimer();
+  syncFocusUI();
+  saveSession();
 }
 function swapFromFocus() {
   const current = focusId;
@@ -1314,7 +1537,29 @@ function bind() {
         x.classList.toggle('on', on);
         x.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
+      syncComposer();
     });
+  });
+  $('input').addEventListener('input', () => { growInput(); syncComposer(); });
+  $('input').addEventListener('focus', syncComposer);
+  $('composer').addEventListener('focusout', () => {
+    clearTimeout(composerTimer);
+    composerTimer = setTimeout(syncComposer, 160);
+  });
+  // Keep the panel open while a chip or add button is being tapped: on iOS the textarea blurs
+  // before the click lands, and collapsing then would move the button out from under the finger.
+  $('composerMore').addEventListener('pointerdown', () => { composerHold = true; });
+  $('composerMore').addEventListener('mousedown', e => {
+    if (e.target.closest('button')) e.preventDefault();
+  });
+  document.addEventListener('pointerup', () => {
+    if (!composerHold) return;
+    setTimeout(() => { composerHold = false; syncComposer(); }, 400);
+  });
+  document.addEventListener('pointercancel', () => {
+    if (!composerHold) return;
+    composerHold = false;
+    syncComposer();
   });
   $('input').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
@@ -1337,15 +1582,16 @@ function bind() {
     if (!it) return;
     const act = btn.dataset.act;
     if (act === 'toggle') {
+      const prevDt = it.dt;
       it.done = !it.done;
       it.dt = it.done ? Date.now() : 0;
       const v = it.cat === 'long' ? 30 : 10;
       if (it.done) {
-        award(v, it.cat === 'long' ? '长期的也做到了' : '完成了一件');
+        award(v, it.cat === 'long' ? '长期的也做到了' : '完成了一件', it.dt);
         confetti();
         queueReveal(plantForTask(it));
       } else {
-        unaward(v);
+        unaward(v, prevDt);
         toast('已放回「' + (it.cat === 'long' ? '长期想做' : '立刻去做') + '」');
       }
       save();
@@ -1390,13 +1636,9 @@ function bind() {
     if (!$('sheet').hidden && $('sheet').classList.contains('show')) { closeSheet(); return; }
     if ($('focus').classList.contains('show')) endFocus();
   });
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      if (running && mode === 'focus' && tick) wilt();
-      return;
-    }
-    if (tick) step();
-  });
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('pageshow', onVisible);
+  window.addEventListener('focus', onVisible);
   $('exp').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify({ items, st, forest })], { type: 'application/json' });
     const a = document.createElement('a');
@@ -1421,18 +1663,22 @@ function bind() {
         return;
       }
       pendingBackup = data;
+      const hasForest = !!(data.forest && typeof data.forest === 'object' && Array.isArray(data.forest.planted));
       openSheet(panel => {
         panel.appendChild(el('h3', 'sheet-title', '用备份替换当前数据？'));
-        panel.appendChild(el('p', 'sheet-note', '清单和进度会换成备份里的内容。旧备份也能用。备份里如果带了森林，会一起换上。'));
+        panel.appendChild(el('p', 'sheet-note', hasForest
+          ? '清单、进度和森林会换成备份里的内容。'
+          : '清单和进度会换成备份里的内容。这份备份没有森林：对不上的树会移走，已完成的事会补种。'));
         const ok = el('button', 'btn primary block', '替换');
         const cancel = el('button', 'btn soft block', '取消');
         ok.addEventListener('click', () => {
           if (!pendingBackup) return;
-          if (Array.isArray(pendingBackup.items)) items = pendingBackup.items;
+          if (Array.isArray(pendingBackup.items)) items = sanitizeItems(pendingBackup.items);
           if (pendingBackup.st && typeof pendingBackup.st === 'object' && !Array.isArray(pendingBackup.st)) st = pendingBackup.st;
           ensureStats();
           normalizeItems();
-          if (pendingBackup.forest && typeof pendingBackup.forest === 'object') applyForestBackup(pendingBackup.forest);
+          if (hasForest) applyForestBackup(pendingBackup.forest);
+          else if (Array.isArray(pendingBackup.items)) reconcileForest();
           pickId = null;
           save();
           saveS();
@@ -1452,6 +1698,7 @@ function bind() {
 $('plantSlot').appendChild(makeTree('sprout'));
 let groveMoved = false;
 let groveX = 0;
+let groveScrollRaf = 0;
 $('grove').addEventListener('pointerdown', e => { groveX = e.clientX; groveMoved = false; });
 $('grove').addEventListener('pointermove', e => { if (Math.abs(e.clientX - groveX) > 8) groveMoved = true; });
 $('grove').addEventListener('click', e => {
@@ -1459,6 +1706,14 @@ $('grove').addEventListener('click', e => {
   const btn = e.target.closest('.grove-tree');
   if (!btn) return;
   openTreeCard(btn.dataset.pid);
+});
+$('groveWorld').addEventListener('scroll', () => {
+  if (groveScrollRaf) return;
+  groveScrollRaf = requestAnimationFrame(() => { groveScrollRaf = 0; syncGrovePager(); });
+}, { passive: true });
+$('groveDots').addEventListener('click', e => {
+  const dot = e.target.closest('.grove-dot');
+  if (dot) showGrovePage(+dot.dataset.page, true);
 });
 $('openCodex').addEventListener('click', openCodex);
 $('closeCodex').addEventListener('click', closeCodex);
@@ -1468,12 +1723,12 @@ $('treeCardBack').addEventListener('click', closeTreeCard);
 $('treeSheetClose').addEventListener('click', closeTreeCard);
 migrateForest();
 bind();
+growInput();
+syncComposer();
 render();
+restoreSession();
 window.addEventListener('resize', () => {
-  if (view !== 'stats' || locked) return;
-  const grove = $('grove');
-  const world = $('groveWorld');
-  if (grove && world && String(grove.clientWidth) !== (world.dataset.viewW || '')) renderGrove();
+  if (view === 'stats' && !locked) maybeRenderGrove();
 });
 if ('serviceWorker' in navigator && location.search.indexOf('nosw=1') === -1) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
