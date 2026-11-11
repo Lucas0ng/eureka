@@ -213,14 +213,23 @@ function renderGrove() {
   const ground = document.createElement('div');
   ground.className = 'grove-ground';
   const n = forest.planted.length;
-  const width = Math.max(340, 28 + n * 46 + 36);
+  const rows = 3;
+  const cols = Math.max(1, Math.ceil(n / rows));
+  const spacing = n > 24 ? 44 : 50;
+  const width = Math.max(320, 16 + cols * spacing + 36);
   world.style.width = width + 'px';
   world.appendChild(ground);
-  for (let i = 0; i < Math.ceil(width / 88); i++) {
+  const depth = [
+    { scale: 0.64, bottom: 108 },
+    { scale: 0.84, bottom: 62 },
+    { scale: 1.05, bottom: 16 }
+  ];
+  for (let i = 0; i < Math.ceil(width / 70); i++) {
     const shrub = document.createElement('i');
     shrub.className = 'shrub';
-    shrub.style.left = (18 + i * 88 + (i % 2) * 12) + 'px';
-    shrub.style.transform = 'scale(' + (0.8 + (i % 3) * 0.15) + ')';
+    shrub.style.left = (12 + i * 70) + 'px';
+    shrub.style.bottom = (i % 2 ? 100 : 28) + 'px';
+    shrub.style.transform = 'scale(' + (0.7 + (i % 3) * 0.2) + ')';
     world.appendChild(shrub);
   }
   if (!n) {
@@ -234,11 +243,15 @@ function renderGrove() {
     if (!spec) return;
     const node = document.createElement('div');
     node.className = 'grove-tree tier-' + spec.tier;
-    const scale = p.scale || 1;
-    node.style.left = (8 + i * 46 + (p.jitter || 0)) + 'px';
-    node.style.bottom = (26 + (p.y || 0)) + 'px';
-    node.style.zIndex = String(i + 1);
-    node.style.transform = 'scale(' + (p.flip ? -scale : scale) + ', ' + scale + ')';
+    const row = i % rows;
+    const col = Math.floor(i / rows);
+    const d = depth[row];
+    const jitter = p.jitter || 0;
+    const s = d.scale * (0.94 + (Math.abs(jitter) % 5) * 0.025);
+    node.style.left = (10 + col * spacing + jitter * 0.35 + row * 14) + 'px';
+    node.style.bottom = (d.bottom + (p.y || 0) * 0.35) + 'px';
+    node.style.zIndex = String(row * 30 + col);
+    node.style.transform = 'scale(' + (p.flip ? -s : s) + ', ' + s + ')';
     node.appendChild(renderTreeSvg(spec));
     world.appendChild(node);
   });
