@@ -49,8 +49,6 @@
     }
     walk(40, 100, 26, 0, 5);
     return shade(14) +
-      '<ellipse cx="40" cy="54" rx="30" ry="30" fill="#d7edda"/>' +
-      '<ellipse cx="28" cy="46" rx="12" ry="10" fill="#edf7ee"/>' +
       '<g fill="none" stroke="#14382c" stroke-linecap="round">' + paths.join('') + '</g>' +
       leaves.join('');
   }
@@ -201,13 +199,11 @@
 
     tree('t09', '剪纸松', 'common', 'papercut',
       shade(16) +
-      '<circle cx="40" cy="50" r="34" fill="#f3e6d0"/>' +
-      '<circle cx="42" cy="52" r="32" fill="#c4554a"/>' +
-      '<circle cx="40" cy="50" r="30" fill="#f7f1e4"/>' +
+      '<path fill="#f3e6d0" d="M43 18 L70 50 H16 Z M43 38 L74 70 H12 Z M43 54 L78 92 H8 Z"/>' +
+      '<path fill="#c4554a" d="M41 16 L68 48 H14 Z M41 36 L72 68 H10 Z M41 52 L76 90 H6 Z"/>' +
       '<path fill="#1f6b4a" fill-rule="evenodd" d="M40 14 L66 46 H14 Z M40 24 L56 42 H24 Z M40 34 L70 66 H10 Z M40 44 L58 62 H22 Z M40 50 L74 88 H6 Z M40 60 L60 84 H20 Z"/>' +
       '<rect x="36" y="84" width="8" height="14" fill="#f3e6d0"/>' +
-      '<rect x="38" y="86" width="4" height="12" fill="#6b3a28"/>' +
-      '<circle cx="40" cy="50" r="30" fill="none" stroke="#8a1e24" stroke-width="1.2"/>'),
+      '<rect x="38" y="86" width="4" height="12" fill="#6b3a28"/>'),
 
     tree('t10', '标本苗', 'common', 'botanical',
       shade(14) +
@@ -256,8 +252,10 @@
     tree('t13', '像素樱', 'rare', 'pixel', t13),
 
     tree('t14', '霓虹松', 'rare', 'cyber',
-      '<defs><radialGradient id="t14n" cx="50%" cy="46%" r="62%"><stop offset="0" stop-color="#10181c"/><stop offset=".7" stop-color="#10181c"/><stop offset="1" stop-color="#10181c" stop-opacity="0"/></radialGradient></defs>' +
-      '<ellipse cx="40" cy="52" rx="32" ry="36" fill="url(#t14n)"/>' +
+      shade(16) +
+      '<g fill="none" stroke="#102428" stroke-width="3.4" stroke-linejoin="round" opacity=".55">' +
+      '<path d="M40 16 L56 40 H24 Z"/><path d="M40 30 L64 58 H16 Z"/><path d="M40 46 L70 78 H10 Z"/>' +
+      '</g>' +
       '<path d="M40 92 V36" stroke="#06383c" stroke-width="5"/>' +
       '<path d="M40 92 V36" stroke="#5ce1e6" stroke-width="1.6"/>' +
       '<g fill="none" stroke-linejoin="round">' +
@@ -301,9 +299,7 @@
       '<path d="M52 18 l6 -2 M58 28 l7 1" stroke="#1c1917" stroke-width="1"/>'),
 
     tree('t17', '星座树', 'rare', 'abstract',
-      '<defs><radialGradient id="t17n" cx="50%" cy="48%" r="64%"><stop offset="0" stop-color="#1b2744"/><stop offset=".68" stop-color="#1b2744"/><stop offset="1" stop-color="#1b2744" stop-opacity="0"/></radialGradient></defs>' +
-      '<ellipse cx="40" cy="52" rx="32" ry="36" fill="url(#t17n)"/>' +
-      '<ellipse cx="28" cy="36" rx="10" ry="6" fill="#31487a" opacity=".45"/>' +
+      shade(12) +
       '<g fill="none" stroke="#8eb4e0" stroke-width="1.15">' +
       '<path d="M40 92 L40 62 L26 46 L18 34"/>' +
       '<path d="M40 70 L56 50 L64 36 L58 24"/>' +
@@ -375,8 +371,10 @@
       '<path d="M36 46 C30 42 26 44 24 40" fill="none" stroke="#5c3a24" stroke-width="1.4" stroke-linecap="round"/>'),
 
     tree('t22', '电路神木', 'epic', 'cyber',
-      '<defs><radialGradient id="t22b" cx="50%" cy="48%" r="62%"><stop offset="0" stop-color="#10181c"/><stop offset=".72" stop-color="#10181c"/><stop offset="1" stop-color="#10181c" stop-opacity="0"/></radialGradient></defs>' +
-      '<ellipse cx="40" cy="50" rx="34" ry="40" fill="url(#t22b)"/>' +
+      shade(14) +
+      '<g fill="none" stroke="#102428" stroke-width="3.6" stroke-linecap="round" opacity=".45">' +
+      '<path d="M40 90 V28 M40 72 H22 V56 H12 M40 64 H58 V46 H68 M40 28 L28 16 M40 28 L52 14 M40 28 V12"/>' +
+      '</g>' +
       '<g fill="none" stroke="#7dffe1" stroke-width="1.45" stroke-linecap="round">' +
       '<path d="M40 90 V28"/>' +
       '<path d="M40 72 H22 V56 H12"/>' +
@@ -419,11 +417,8 @@
       '<path d="M26 100 C20 96 16 98 14 94 M54 100 C60 96 66 98 68 92" fill="none" stroke="#5c3a24" stroke-width="2" stroke-linecap="round"/>'),
 
     tree('t25', '夜樱', 'epic', 'manga',
-      '<defs><clipPath id="t25c"><circle cx="42" cy="36" r="24"/></clipPath></defs>' +
-      '<circle cx="42" cy="36" r="26" fill="#161426"/>' +
-      '<circle cx="52" cy="24" r="8" fill="#f7f1e4"/>' +
-      '<circle cx="48" cy="22" r="7" fill="#161426"/>' +
-      '<g clip-path="url(#t25c)" opacity=".45">' + tone(42, 36, 22, 22, 3.6, 0.55, '#f7f1e4') + '</g>' +
+      shade(14) +
+      '<circle cx="58" cy="18" r="7" fill="#f7f1e4" stroke="#1c1917" stroke-width="1.2"/>' +
       '<path d="M34 100 C36 78 40 62 46 46" fill="none" stroke="#1c1917" stroke-width="3.2" stroke-linecap="round"/>' +
       '<path d="M46 52 C58 46 66 36 62 26" fill="none" stroke="#1c1917" stroke-width="2.2" stroke-linecap="round"/>' +
       '<path d="M44 60 C32 56 24 48 26 38" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round"/>' +
@@ -457,7 +452,7 @@
 
     tree('t28', '极光树', 'legendary', 'cyber',
       '<defs><linearGradient id="t28a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ce1e6"/><stop offset=".5" stop-color="#c9a6ff"/><stop offset="1" stop-color="#f8f6a8"/></linearGradient></defs>' +
-      '<ellipse cx="40" cy="50" rx="34" ry="38" fill="#0c1418"/>' +
+      shade(14) +
       '<path d="M8 62 C22 28 34 26 42 42 C50 58 62 34 74 24 C62 40 50 44 40 40 C28 36 18 58 8 62 Z" fill="#5ce1e6" opacity=".9"/>' +
       '<path d="M14 50 C28 18 48 16 60 34 C46 30 34 36 28 48 C24 36 16 40 14 50 Z" fill="#c9a6ff" opacity=".88"/>' +
       '<path d="M20 40 C32 16 52 22 64 18 C52 28 40 26 34 36 C40 24 52 26 58 20" fill="#f8f6a8" opacity=".75"/>' +
@@ -493,11 +488,10 @@
       '<circle cx="18" cy="36" r="1.3" fill="#e6c56a"/><circle cx="64" cy="30" r="1.2" fill="#f0d78a"/>'),
 
     tree('t30', '月下松', 'legendary', 'ukiyo',
-      '<ellipse cx="40" cy="54" rx="36" ry="40" fill="#1a2744"/>' +
-      '<circle cx="54" cy="28" r="14" fill="#f4e7c2" stroke="#14120f" stroke-width="1.3"/>' +
-      '<circle cx="50" cy="26" r="11" fill="#f7f1e4"/>' +
-      '<path d="M8 70 C20 64 28 66 40 62 C52 58 64 64 74 58" fill="none" stroke="#f7f1e4" stroke-width="3" opacity=".35" stroke-linecap="round"/>' +
-      '<path d="M6 78 C22 72 34 76 48 70 C60 66 70 72 76 68" fill="none" stroke="#f7f1e4" stroke-width="2" opacity=".25"/>' +
+      shade(16) +
+      '<circle cx="58" cy="20" r="10" fill="#f4e7c2" stroke="#14120f" stroke-width="1.2"/>' +
+      '<path d="M14 30 C24 26 32 28 40 26" fill="none" stroke="#d5e4ee" stroke-width="2.2" opacity=".85" stroke-linecap="round"/>' +
+      '<path d="M10 40 C22 36 34 40 44 36" fill="none" stroke="#e7f1f6" stroke-width="1.6" opacity=".7" stroke-linecap="round"/>' +
       '<path d="M30 100 C32 78 28 64 34 50" fill="none" stroke="#14120f" stroke-width="3.2" stroke-linecap="round"/>' +
       '<path d="M34 54 C24 40 10 42 8 30 C18 34 26 32 30 42 C24 36 18 26 26 18 C32 28 32 38 38 44 C34 32 42 18 54 16 C48 30 46 38 52 46 C62 34 74 38 74 50 C64 50 54 46 50 54 C58 56 66 64 60 74 C50 68 42 62 40 54 C32 66 18 62 16 50 C24 56 30 52 34 54 Z" fill="#14382c" stroke="#14120f" stroke-width="1.45" stroke-linejoin="round"/>' +
       '<g fill="none" stroke="#d7e6cf" stroke-width=".9" stroke-linecap="round">' +

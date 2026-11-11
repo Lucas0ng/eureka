@@ -199,12 +199,8 @@ function reduceMotion() {
   return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 let svgUid = 0;
-function rarityBack(tree) {
-  if (!tree || tree.tier === 'common' || tree.style === 'pixel') return '';
-  const color = tree.tier === 'rare' ? '#8ec8e6' : tree.tier === 'epic' ? '#d7b6ee' : '#f3d78a';
-  const rx = tree.tier === 'legendary' ? 30 : 26;
-  const op = tree.tier === 'legendary' ? '.5' : '.33';
-  return '<ellipse cx="40" cy="48" rx="' + rx + '" ry="24" fill="' + color + '" opacity="' + op + '"/>';
+function rarityBack() {
+  return '';
 }
 function rarityFront(tree) {
   if (!tree || tree.tier === 'common') return '';
@@ -243,41 +239,35 @@ function renderTreeSvg(tree) {
 }
 const GROVE_H = 352;
 const DEPTHS = [
-  { bottom: 128, scale: 0.84, z: 3, stagger: 0 },
-  { bottom: 70, scale: 1.02, z: 5, stagger: 14 },
-  { bottom: 182, scale: 0.66, z: 1, stagger: -4 }
+  { bottom: 124, scale: 0.9, z: 3, stagger: 22 },
+  { bottom: 64, scale: 1, z: 5, stagger: 48 },
+  { bottom: 178, scale: 0.76, z: 1, stagger: -6 }
 ];
-const TIER_SCALE = { common: 0.94, rare: 1, epic: 1.07, legendary: 1.14 };
+const TIER_SCALE = { common: 0.98, rare: 1, epic: 1.03, legendary: 1.06 };
 function layoutSpots(plants) {
   const measured = ($('grove') && $('grove').clientWidth) || 0;
   const viewW = measured || 320;
-  let maxX = 150;
+  let maxX = 120;
   const spots = plants.map((p, i) => {
     const spec = treeById(p.treeId);
     const d = DEPTHS[i % 3];
     const col = Math.floor(i / 3);
     const tierS = spec ? (TIER_SCALE[spec.tier] || 1) : 1;
+    const raw = Number(p.scale) || 1;
+    const plantScale = 1 + (raw - 1) * 0.28;
     const jitter = Number(p.jitter) || 0;
-    const x = 76 + col * 50 + d.stagger + jitter * 0.35;
-    const scale = Math.max(0.55, Math.min(1.26, d.scale * (Number(p.scale) || 1) * tierS));
+    const x = 112 + col * 84 + d.stagger + jitter * 0.15;
+    const scale = Math.max(0.7, Math.min(1.1, d.scale * plantScale * tierS));
     if (x > maxX) maxX = x;
     return {
       x: x,
-      bottom: d.bottom + (Number(p.y) || 0) * 0.35,
+      bottom: d.bottom + (Number(p.y) || 0) * 0.2,
       scale: scale,
-      z: d.z * 40 + col,
+      z: d.z * 100 + col,
       flip: !!p.flip
     };
   });
-  const natural = Math.ceil(maxX + 78);
-  if (measured && natural > measured && natural < measured * 1.55 && spots.length) {
-    const minX = spots.reduce((m, s) => Math.min(m, s.x), maxX);
-    const span = Math.max(1, maxX - minX);
-    const room = Math.max(80, measured - 120);
-    const k = Math.min(1, room / span);
-    spots.forEach(s => { s.x = 64 + (s.x - minX) * k; });
-    return { width: measured, spots: spots, measured: measured };
-  }
+  const natural = Math.ceil(maxX + 124);
   return { width: Math.max(viewW, natural), spots: spots, measured: measured };
 }
 function isleFlower(x, y, color) {
@@ -306,9 +296,32 @@ function buildIsland(w, h, anchors, empty) {
   const rx = Math.max(120, w * 0.44);
   const ry = h * 0.2;
   const parts = [];
-  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 18) + '" rx="' + (rx * 0.9) + '" ry="' + (ry * 0.62) + '" fill="var(--isle-shadow)"/>');
-  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 10) + '" rx="' + rx + '" ry="' + (ry + 10) + '" fill="var(--isle-cliff)"/>');
-  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 3) + '" rx="' + (rx * 0.985) + '" ry="' + (ry + 2) + '" fill="var(--isle-sand)"/>');
+  parts.push('<defs><linearGradient id="cliffShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--isle-sand)"/><stop offset=".4" stop-color="var(--isle-cliff)"/><stop offset="1" stop-color="var(--isle-cliff-deep)"/></linearGradient></defs>');
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + ry * 0.85) + '" rx="' + (rx * 0.78) + '" ry="' + (ry * 0.34) + '" fill="var(--isle-reflect)" opacity=".9"/>');
+  parts.push('<ellipse cx="' + (w * 0.36) + '" cy="' + (h * 0.9) + '" rx="' + Math.min(78, w * 0.18) + '" ry="6" fill="var(--isle-mist)"/>');
+  parts.push('<ellipse cx="' + (w * 0.62) + '" cy="' + (h * 0.935) + '" rx="' + Math.min(96, w * 0.22) + '" ry="5" fill="var(--isle-mist)" opacity=".75"/>');
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 22) + '" rx="' + (rx * 0.86) + '" ry="' + (ry * 0.5) + '" fill="var(--isle-shadow)"/>');
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 18) + '" rx="' + (rx * 1.02) + '" ry="' + (ry + 16) + '" fill="url(#cliffShade)"/>');
+  const lip = cy + ry - 6;
+  const rootN = Math.max(6, Math.round(w / 62));
+  for (let i = 0; i < rootN; i++) {
+    const x = w * (0.14 + (0.72 * i) / Math.max(1, rootN - 1));
+    const drop = 16 + (i % 3) * 6;
+    const lean = i % 2 ? 5 : -4;
+    parts.push('<path d="M' + x.toFixed(1) + ' ' + lip.toFixed(1) + ' q ' + lean + ' ' + (drop * 0.55).toFixed(1) + ' ' + (lean * 0.45).toFixed(1) + ' ' + drop + '" fill="none" stroke="var(--isle-root)" stroke-width="1.45" stroke-linecap="round"/>');
+    if (i % 2 === 0) {
+      parts.push('<path d="M' + (x + 7).toFixed(1) + ' ' + (lip + 1).toFixed(1) + ' q 2 7 -1 13" fill="none" stroke="var(--isle-moss)" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>');
+    }
+  }
+  const rockN = Math.max(4, Math.round(w / 88));
+  for (let i = 0; i < rockN; i++) {
+    const x = w * (0.18 + (0.64 * i) / Math.max(1, rockN - 1));
+    const y = cy + ry + 8 + (i % 2) * 5;
+    const r = 3.4 + (i % 3) * 1.1;
+    parts.push('<ellipse cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" rx="' + r.toFixed(1) + '" ry="' + (r * 0.55).toFixed(1) + '" fill="var(--isle-stone)"/>');
+    parts.push('<ellipse cx="' + (x - 1).toFixed(1) + '" cy="' + (y - 1).toFixed(1) + '" rx="' + (r * 0.4).toFixed(1) + '" ry="' + (r * 0.18).toFixed(1) + '" fill="#fff" opacity=".28"/>');
+  }
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 4) + '" rx="' + (rx * 0.985) + '" ry="' + (ry + 2) + '" fill="var(--isle-sand)"/>');
   parts.push('<ellipse cx="' + cx + '" cy="' + (cy - 4) + '" rx="' + (rx * 0.95) + '" ry="' + (ry - 1) + '" fill="var(--isle-grass)"/>');
   parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 8) + '" rx="' + (rx * 0.72) + '" ry="' + (ry * 0.48) + '" fill="var(--isle-grass-deep)" opacity=".28"/>');
   parts.push('<ellipse cx="' + (w * 0.32) + '" cy="' + (cy - ry * 0.22) + '" rx="' + (Math.min(rx * 0.28, 78)) + '" ry="' + (ry * 0.36) + '" fill="var(--isle-hill)" opacity=".9"/>');
@@ -369,7 +382,7 @@ function buildIsland(w, h, anchors, empty) {
     '<rect x="-4" y="-24" width="8" height="8" rx="1.2" fill="var(--isle-lantern)"/>' +
     '<path d="M-4 -20 h8 M0 -24 v8" stroke="var(--isle-wood)" stroke-width=".6" opacity=".55"/>' +
     '</g>');
-  const benchX = Math.min(w - 46, Math.max(w * 0.78, 210));
+  const benchX = Math.max(86, w - 64);
   parts.push('<g transform="translate(' + benchX.toFixed(1) + ' ' + (ly + 10).toFixed(1) + ')" stroke-linecap="round">' +
     '<path d="M4 14 V6 M22 14 V6" stroke="var(--isle-wood)" stroke-width="2.1"/>' +
     '<path d="M0 6 H28" stroke="var(--isle-wood-hi)" stroke-width="3.4"/>' +
@@ -445,9 +458,13 @@ function renderGrove() {
     const pit = document.createElement('i');
     pit.className = 'pit';
     pit.setAttribute('aria-hidden', 'true');
+    const contact = document.createElement('i');
+    contact.className = 'contact';
+    contact.setAttribute('aria-hidden', 'true');
     const sway = document.createElement('span');
     sway.className = 'sway';
     sway.appendChild(renderTreeSvg(spec));
+    node.appendChild(contact);
     node.appendChild(pit);
     node.appendChild(sway);
     world.appendChild(node);

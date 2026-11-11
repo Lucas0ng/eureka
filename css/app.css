@@ -468,6 +468,11 @@ li.empty {
   --water-b: #8fb8b0;
   --isle-shadow: rgba(24, 60, 48, .28);
   --isle-cliff: #6d4e34;
+  --isle-cliff-deep: #3e2a1c;
+  --isle-root: #4a3020;
+  --isle-moss: #1d5a3c;
+  --isle-mist: rgba(255, 253, 248, .42);
+  --isle-reflect: rgba(47, 125, 92, .16);
   --isle-sand: #e7d7b8;
   --isle-grass-deep: #1f6b52;
   --isle-grass: #2f7d5c;
@@ -592,6 +597,16 @@ li.empty {
   background: none;
   overflow: visible;
 }
+.grove-tree .contact {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 1px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(24, 42, 32, .42) 0%, rgba(24, 42, 32, .16) 48%, transparent 74%);
+  pointer-events: none;
+}
 .grove-tree .sway {
   display: block;
   width: 100%;
@@ -606,11 +621,11 @@ li.empty {
   height: 100%;
   display: block;
   overflow: visible;
-  filter: drop-shadow(0 8px 2px rgba(20, 36, 28, .22));
+  filter: drop-shadow(0 2px 1px rgba(20, 36, 28, .16));
 }
-.grove-tree.tier-rare .sway svg { filter: drop-shadow(0 8px 2px rgba(20, 36, 28, .22)) drop-shadow(0 0 7px rgba(80, 160, 210, .55)); }
-.grove-tree.tier-epic .sway svg { filter: drop-shadow(0 8px 2px rgba(20, 36, 28, .24)) drop-shadow(0 0 9px rgba(170, 120, 210, .62)); }
-.grove-tree.tier-legendary .sway svg { filter: drop-shadow(0 8px 3px rgba(20, 36, 28, .26)) drop-shadow(0 0 12px rgba(240, 196, 90, .78)); }
+.grove-tree.tier-rare .sway svg { filter: drop-shadow(0 2px 1px rgba(20, 36, 28, .16)) drop-shadow(0 0 6px rgba(80, 160, 210, .5)); }
+.grove-tree.tier-epic .sway svg { filter: drop-shadow(0 2px 1px rgba(20, 36, 28, .16)) drop-shadow(0 0 8px rgba(170, 120, 210, .55)); }
+.grove-tree.tier-legendary .sway svg { filter: drop-shadow(0 2px 1px rgba(20, 36, 28, .18)) drop-shadow(0 0 10px rgba(240, 196, 90, .7)); }
 .grove-tree .pit {
   position: absolute;
   left: 50%;
@@ -673,6 +688,11 @@ li.empty {
     --water-b: #0c242c;
     --isle-shadow: rgba(0, 0, 0, .5);
     --isle-cliff: #2a241c;
+    --isle-cliff-deep: #14110e;
+    --isle-root: #3a2e24;
+    --isle-moss: #143028;
+    --isle-mist: rgba(186, 214, 220, .2);
+    --isle-reflect: rgba(20, 60, 54, .28);
     --isle-sand: #4a4338;
     --isle-grass-deep: #143028;
     --isle-grass: #1c4334;
@@ -689,10 +709,13 @@ li.empty {
     --isle-reed: #1a4030;
     --isle-lily: #1e4a38;
   }
-  .grove-tree .sway svg { filter: drop-shadow(0 10px 4px rgba(0, 0, 0, .45)); }
-  .grove-tree.tier-rare .sway svg { filter: drop-shadow(0 10px 4px rgba(0, 0, 0, .45)) drop-shadow(0 0 8px rgba(120, 190, 230, .7)); }
-  .grove-tree.tier-epic .sway svg { filter: drop-shadow(0 10px 4px rgba(0, 0, 0, .5)) drop-shadow(0 0 10px rgba(200, 160, 240, .75)); }
-  .grove-tree.tier-legendary .sway svg { filter: drop-shadow(0 10px 4px rgba(0, 0, 0, .5)) drop-shadow(0 0 14px rgba(255, 210, 120, .85)); }
+  .grove-tree .contact {
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, .62) 0%, rgba(0, 0, 0, .24) 50%, transparent 74%);
+  }
+  .grove-tree .sway svg { filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .35)); }
+  .grove-tree.tier-rare .sway svg { filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .35)) drop-shadow(0 0 7px rgba(120, 190, 230, .65)); }
+  .grove-tree.tier-epic .sway svg { filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .35)) drop-shadow(0 0 8px rgba(200, 160, 240, .7)); }
+  .grove-tree.tier-legendary .sway svg { filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .4)) drop-shadow(0 0 10px rgba(255, 210, 120, .75)); }
   .sun, .cloud, .bird { opacity: 0; }
   .moon, .star { opacity: 1; }
   .firefly { animation: blink 3.6s ease-in-out infinite; }
