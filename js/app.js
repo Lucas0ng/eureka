@@ -195,69 +195,271 @@ function migrateForest() {
   forest.migrated = true;
   saveForest();
 }
+function reduceMotion() {
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+let svgUid = 0;
+function rarityBack(tree) {
+  if (!tree || tree.tier === 'common' || tree.style === 'pixel') return '';
+  const color = tree.tier === 'rare' ? '#8ec8e6' : tree.tier === 'epic' ? '#d7b6ee' : '#f3d78a';
+  const rx = tree.tier === 'legendary' ? 30 : 26;
+  const op = tree.tier === 'legendary' ? '.5' : '.33';
+  return '<ellipse cx="40" cy="48" rx="' + rx + '" ry="24" fill="' + color + '" opacity="' + op + '"/>';
+}
+function rarityFront(tree) {
+  if (!tree || tree.tier === 'common') return '';
+  if (tree.style === 'pixel') {
+    const gem = tree.tier === 'rare' ? '#7ec8e8' : tree.tier === 'epic' ? '#c9a0e0' : '#f0d060';
+    let s = '<g shape-rendering="crispEdges"><rect x="60" y="86" width="8" height="8" fill="' + gem + '"/><rect x="62" y="84" width="4" height="4" fill="#fff"/>';
+    if (tree.tier !== 'rare') {
+      s += '<rect x="8" y="10" width="4" height="4" fill="' + gem + '"/><rect x="68" y="14" width="4" height="4" fill="' + gem + '"/>';
+    }
+    if (tree.tier === 'legendary') s += '<rect x="36" y="2" width="8" height="4" fill="#f0d060"/>';
+    return s + '</g>';
+  }
+  if (tree.tier === 'rare') {
+    return '<ellipse cx="40" cy="100" rx="16" ry="3.1" fill="none" stroke="#3d7ea6" stroke-width="1.25"/>' +
+      '<path d="M63 74 l2.1 1.1 -2.1 1.1 -1.1 2.1 -1.1-2.1 -2.1-1.1 2.1-1.1 1.1-2.1z" fill="#e7f6ff" stroke="#3d7ea6" stroke-width=".55"/>';
+  }
+  if (tree.tier === 'epic') {
+    return '<ellipse cx="40" cy="100" rx="17" ry="3.2" fill="none" stroke="#9b6bb8" stroke-width="1.45"/>' +
+      '<g fill="#f6e8ff" stroke="#7a4e98" stroke-width=".45"><path d="M14 20 l1.3 2.8 h3 l-2.4 1.8.9 2.9 -2.8-2 -2.8 2 .9-2.9 -2.4-1.8 h3z"/>' +
+      '<path d="M66 16 l1.1 2.4 h2.6 l-2.1 1.5.8 2.4 -2.4-1.7 -2.4 1.7.8-2.4 -2.1-1.5 h2.6z"/></g>';
+  }
+  return '<ellipse cx="40" cy="100" rx="18" ry="3.4" fill="none" stroke="#e0b44a" stroke-width="1.6"/>' +
+    '<g fill="#fff8dc" stroke="#c8922a" stroke-width=".5"><path d="M40 5 l1.5 3.6 h3.8 l-3 2.2 1.1 3.6 L40 12.6 36.6 14.4 l1.1-3.6 -3-2.2 h3.8z"/>' +
+    '<path d="M15 15 l1 2.4 h2.6 l-2.1 1.5.8 2.4 -2.3-1.6 -2.3 1.6.8-2.4 -2.1-1.5 h2.6z"/>' +
+    '<path d="M65 13 l1 2.4 h2.6 l-2.1 1.5.8 2.4 -2.3-1.6 -2.3 1.6.8-2.4 -2.1-1.5 h2.6z"/></g>';
+}
 function renderTreeSvg(tree) {
+  svgUid += 1;
+  const uid = 's' + svgUid;
+  let body = rarityBack(tree) + (tree.svg || '') + rarityFront(tree);
+  body = body.replace(/\bid="([^"]+)"/g, function (_, id) { return 'id="' + uid + id + '"'; });
+  body = body.replace(/url\(#([^)]+)\)/g, function (_, id) { return 'url(#' + uid + id + ')'; });
   const holder = document.createElement('template');
-  holder.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + (tree.vb || '0 0 64 80') + '" aria-hidden="true">' + tree.svg + '</svg>';
+  holder.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + (tree.vb || '0 0 80 104') + '" aria-hidden="true">' + body + '</svg>';
   return holder.content.firstElementChild;
+}
+const GROVE_H = 352;
+const DEPTHS = [
+  { bottom: 128, scale: 0.84, z: 3, stagger: 0 },
+  { bottom: 70, scale: 1.02, z: 5, stagger: 14 },
+  { bottom: 182, scale: 0.66, z: 1, stagger: -4 }
+];
+const TIER_SCALE = { common: 0.94, rare: 1, epic: 1.07, legendary: 1.14 };
+function layoutSpots(plants) {
+  const measured = ($('grove') && $('grove').clientWidth) || 0;
+  const viewW = measured || 320;
+  let maxX = 150;
+  const spots = plants.map((p, i) => {
+    const spec = treeById(p.treeId);
+    const d = DEPTHS[i % 3];
+    const col = Math.floor(i / 3);
+    const tierS = spec ? (TIER_SCALE[spec.tier] || 1) : 1;
+    const jitter = Number(p.jitter) || 0;
+    const x = 76 + col * 50 + d.stagger + jitter * 0.35;
+    const scale = Math.max(0.55, Math.min(1.26, d.scale * (Number(p.scale) || 1) * tierS));
+    if (x > maxX) maxX = x;
+    return {
+      x: x,
+      bottom: d.bottom + (Number(p.y) || 0) * 0.35,
+      scale: scale,
+      z: d.z * 40 + col,
+      flip: !!p.flip
+    };
+  });
+  const natural = Math.ceil(maxX + 78);
+  if (measured && natural > measured && natural < measured * 1.55 && spots.length) {
+    const minX = spots.reduce((m, s) => Math.min(m, s.x), maxX);
+    const span = Math.max(1, maxX - minX);
+    const room = Math.max(80, measured - 120);
+    const k = Math.min(1, room / span);
+    spots.forEach(s => { s.x = 64 + (s.x - minX) * k; });
+    return { width: measured, spots: spots, measured: measured };
+  }
+  return { width: Math.max(viewW, natural), spots: spots, measured: measured };
+}
+function isleFlower(x, y, color) {
+  return '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')">' +
+    '<path d="M0 11 V1" stroke="var(--isle-reed)" stroke-width="1.1" fill="none"/>' +
+    '<circle cx="0" cy="0" r="2.3" fill="' + color + '"/>' +
+    '<circle cx="-2.3" cy="1.1" r="1.7" fill="' + color + '"/>' +
+    '<circle cx="2.3" cy="1.1" r="1.7" fill="' + color + '"/>' +
+    '<circle cx="0" cy="2.2" r="1.5" fill="' + color + '"/>' +
+    '<circle cx="0" cy=".4" r=".8" fill="#fffaf0"/>' +
+    '</g>';
+}
+function isleMushroom(x, y, s) {
+  return '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') scale(' + s + ')">' +
+    '<rect x="-1.3" y="0" width="2.6" height="6" rx="1" fill="#f4efe6"/>' +
+    '<ellipse cx="0" cy="0" rx="6.2" ry="3.5" fill="#e4c8bc"/>' +
+    '<ellipse cx="0" cy="-.7" rx="6" ry="3.1" fill="#f7f3ea"/>' +
+    '<circle cx="-2.1" cy="-1" r=".8" fill="#d25a52"/>' +
+    '<circle cx="1.5" cy="-.3" r=".55" fill="#d25a52"/>' +
+    '<ellipse cx="-1.8" cy="-1.8" rx="2" ry=".7" fill="#fff" opacity=".6"/>' +
+    '</g>';
+}
+function buildIsland(w, h, anchors, empty) {
+  const cx = w / 2;
+  const cy = h * 0.66;
+  const rx = Math.max(120, w * 0.44);
+  const ry = h * 0.2;
+  const parts = [];
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 18) + '" rx="' + (rx * 0.9) + '" ry="' + (ry * 0.62) + '" fill="var(--isle-shadow)"/>');
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 10) + '" rx="' + rx + '" ry="' + (ry + 10) + '" fill="var(--isle-cliff)"/>');
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 3) + '" rx="' + (rx * 0.985) + '" ry="' + (ry + 2) + '" fill="var(--isle-sand)"/>');
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy - 4) + '" rx="' + (rx * 0.95) + '" ry="' + (ry - 1) + '" fill="var(--isle-grass)"/>');
+  parts.push('<ellipse cx="' + cx + '" cy="' + (cy + 8) + '" rx="' + (rx * 0.72) + '" ry="' + (ry * 0.48) + '" fill="var(--isle-grass-deep)" opacity=".28"/>');
+  parts.push('<ellipse cx="' + (w * 0.32) + '" cy="' + (cy - ry * 0.22) + '" rx="' + (Math.min(rx * 0.28, 78)) + '" ry="' + (ry * 0.36) + '" fill="var(--isle-hill)" opacity=".9"/>');
+  parts.push('<ellipse cx="' + (w * 0.6) + '" cy="' + (cy - ry * 0.28) + '" rx="' + (Math.min(rx * 0.24, 70)) + '" ry="' + (ry * 0.3) + '" fill="var(--isle-grass-hi)" opacity=".55"/>');
+  parts.push('<ellipse cx="' + (w * 0.46) + '" cy="' + (cy - ry * 0.02) + '" rx="' + (Math.min(rx * 0.16, 48)) + '" ry="' + (ry * 0.2) + '" fill="var(--isle-grass-deep)" opacity=".18"/>');
+  const py = h - 102;
+  const path = 'M ' + (w * 0.1) + ' ' + (py + 10) +
+    ' C ' + (w * 0.26) + ' ' + (py - 26) + ', ' + (w * 0.4) + ' ' + (py + 20) + ', ' + (w * 0.56) + ' ' + (py - 4) +
+    ' S ' + (w * 0.8) + ' ' + (py + 14) + ', ' + (w * 0.9) + ' ' + (py - 16);
+  parts.push('<path d="' + path + '" fill="none" stroke="var(--isle-path-edge)" stroke-width="12" stroke-linecap="round"/>');
+  parts.push('<path d="' + path + '" fill="none" stroke="var(--isle-path)" stroke-width="7.5" stroke-linecap="round"/>');
+  for (let x = w * 0.14; x < w * 0.88; x += 16) {
+    const y = cy + ry * 0.62 + ((Math.round(x) * 5) % 8);
+    parts.push('<path d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' q1.4 -10 .2 -14" stroke="var(--isle-grass-hi)" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".8"/>');
+  }
+  function clear(x) {
+    if (empty) return true;
+    return !anchors.some(a => Math.abs(a - x) < 32);
+  }
+  [[w * 0.07, cy + 4], [w * 0.94, cy + 8]].forEach(p => {
+    const x = p[0];
+    const y = p[1];
+    parts.push('<g fill="none" stroke="var(--isle-reed)" stroke-width="1.25" stroke-linecap="round">' +
+      '<path d="M' + x.toFixed(1) + ' ' + y.toFixed(1) + ' c-1 -12 2 -18 0 -24"/>' +
+      '<path d="M' + x.toFixed(1) + ' ' + y.toFixed(1) + ' c4 -9 8 -14 5 -20"/>' +
+      '<path d="M' + (x + 3).toFixed(1) + ' ' + y.toFixed(1) + ' c-5 -8 -6 -15 -2 -20"/>' +
+      '</g>');
+  });
+  [[0.2, 0.915], [0.5, 0.945], [0.78, 0.92]].forEach((p, i) => {
+    const x = w * p[0];
+    const y = h * p[1];
+    parts.push('<ellipse cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" rx="' + (8 + i) + '" ry="3.1" fill="var(--isle-lily)"/>');
+    parts.push('<path d="M' + (x - 5).toFixed(1) + ' ' + y.toFixed(1) + ' L' + x.toFixed(1) + ' ' + (y - 1).toFixed(1) + ' L' + (x + 6).toFixed(1) + ' ' + y.toFixed(1) + '" fill="none" stroke="#e7f3ea" stroke-width=".8" opacity=".7"/>');
+  });
+  [[0.18, 6], [0.41, 3.4], [0.77, 4.6]].forEach(s => {
+    const x = w * s[0];
+    if (!clear(x)) return;
+    const y = cy + ry * 0.15;
+    parts.push('<ellipse cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" rx="' + s[1] + '" ry="' + (s[1] * 0.62) + '" fill="var(--isle-stone)"/>');
+    parts.push('<ellipse cx="' + (x - 1).toFixed(1) + '" cy="' + (y - 1).toFixed(1) + '" rx="' + (s[1] * 0.4) + '" ry="' + (s[1] * 0.18) + '" fill="#fff" opacity=".3"/>');
+  });
+  const colors = ['#e7a0b4', '#f0d060', '#fffaf0', '#e07a62', '#d5e4f6', '#f3b6c8', '#f7e7a4'];
+  [0.15, 0.24, 0.36, 0.47, 0.63, 0.74, 0.86].forEach((fx, i) => {
+    const x = w * fx;
+    if (!clear(x)) return;
+    parts.push(isleFlower(x, py + (i % 2 ? 14 : -6), colors[i % colors.length]));
+  });
+  [[0.21, 0.95], [0.52, 0.8], [0.7, 1]].forEach(m => {
+    const x = w * m[0];
+    if (!clear(x)) return;
+    parts.push(isleMushroom(x, py + 8, m[1]));
+  });
+  const ly = py + 2;
+  parts.push('<g transform="translate(34 ' + ly.toFixed(1) + ')">' +
+    '<circle class="lantern-glow" cx="0" cy="-20" r="10" fill="var(--isle-lantern)"/>' +
+    '<rect x="-1.1" y="-8" width="2.2" height="20" rx="1" fill="var(--isle-wood)"/>' +
+    '<path d="M-6.2 -26 h12.4 l-2.2 12 h-8 z" fill="var(--isle-wood)"/>' +
+    '<rect x="-4" y="-24" width="8" height="8" rx="1.2" fill="var(--isle-lantern)"/>' +
+    '<path d="M-4 -20 h8 M0 -24 v8" stroke="var(--isle-wood)" stroke-width=".6" opacity=".55"/>' +
+    '</g>');
+  const benchX = Math.min(w - 46, Math.max(w * 0.78, 210));
+  parts.push('<g transform="translate(' + benchX.toFixed(1) + ' ' + (ly + 10).toFixed(1) + ')" stroke-linecap="round">' +
+    '<path d="M4 14 V6 M22 14 V6" stroke="var(--isle-wood)" stroke-width="2.1"/>' +
+    '<path d="M0 6 H28" stroke="var(--isle-wood-hi)" stroke-width="3.4"/>' +
+    '<path d="M5 6 V-4 H23 V6" fill="var(--isle-wood)" stroke="var(--isle-wood)" stroke-width="1.3"/>' +
+    '<path d="M5 -4 H23" stroke="var(--isle-wood-hi)" stroke-width="1.2"/>' +
+    '</g>');
+  if (empty) {
+    const sx = w * 0.52;
+    const sy = py + 2;
+    parts.push('<ellipse cx="' + sx.toFixed(1) + '" cy="' + sy.toFixed(1) + '" rx="24" ry="8.5" fill="var(--isle-soil)"/>');
+    parts.push('<ellipse cx="' + sx.toFixed(1) + '" cy="' + (sy - 1.5).toFixed(1) + '" rx="15" ry="5" fill="var(--isle-soil-hi)"/>');
+    parts.push('<ellipse cx="' + sx.toFixed(1) + '" cy="' + (sy - 3).toFixed(1) + '" rx="3.3" ry="2.2" fill="#6b3e22"/>');
+    parts.push('<ellipse cx="' + (sx - 1).toFixed(1) + '" cy="' + (sy - 3.6).toFixed(1) + '" rx="1.1" ry=".6" fill="#f3e6d0"/>');
+  }
+  const holder = document.createElement('template');
+  holder.innerHTML = '<svg class="isle" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true">' + parts.join('') + '</svg>';
+  return holder.content.firstElementChild;
+}
+function renderGroveStats() {
+  const counts = { common: 0, rare: 0, epic: 0, legendary: 0 };
+  const owned = {};
+  forest.planted.forEach(p => {
+    owned[p.treeId] = (owned[p.treeId] || 0) + 1;
+    const spec = treeById(p.treeId);
+    if (spec && Object.prototype.hasOwnProperty.call(counts, spec.tier)) counts[spec.tier] += 1;
+  });
+  const kinds = Object.keys(owned).length;
+  $('groveCount').textContent = String(forest.planted.length);
+  $('codexFrac').textContent = kinds + '/30';
+  $('codexFill').style.width = (kinds / 30 * 100) + '%';
+  const chips = $('rarityChips');
+  chips.replaceChildren();
+  ['common', 'rare', 'epic', 'legendary'].forEach(tier => {
+    const chip = el('span', 'rchip tier-' + tier + (counts[tier] ? '' : ' is-zero'));
+    const dot = document.createElement('i');
+    chip.appendChild(dot);
+    chip.appendChild(document.createTextNode(' ' + (window.EUREKA_TIER_NAME[tier] || tier) + ' ' + counts[tier]));
+    chips.appendChild(chip);
+  });
 }
 function renderGrove() {
   ensureForest();
-  const owned = {};
-  forest.planted.forEach(p => { owned[p.treeId] = (owned[p.treeId] || 0) + 1; });
-  const kinds = Object.keys(owned).length;
-  $('groveNote').textContent = forest.planted.length
-    ? '已种 ' + forest.planted.length + ' 棵 · 图鉴 ' + kinds + '/30。点按森林打开图鉴。'
-    : '完成一件事，这里会长出第一棵树。';
+  renderGroveStats();
   const world = $('groveWorld');
   world.replaceChildren();
-  const ground = document.createElement('div');
-  ground.className = 'grove-ground';
-  const n = forest.planted.length;
-  const rows = 3;
-  const cols = Math.max(1, Math.ceil(n / rows));
-  const spacing = n > 24 ? 44 : 50;
-  const width = Math.max(320, 16 + cols * spacing + 36);
-  world.style.width = width + 'px';
-  world.appendChild(ground);
-  const depth = [
-    { scale: 0.64, bottom: 108 },
-    { scale: 0.84, bottom: 62 },
-    { scale: 1.05, bottom: 16 }
-  ];
-  for (let i = 0; i < Math.ceil(width / 70); i++) {
-    const shrub = document.createElement('i');
-    shrub.className = 'shrub';
-    shrub.style.left = (12 + i * 70) + 'px';
-    shrub.style.bottom = (i % 2 ? 100 : 28) + 'px';
-    shrub.style.transform = 'scale(' + (0.7 + (i % 3) * 0.2) + ')';
-    world.appendChild(shrub);
-  }
-  if (!n) {
-    const empty = document.createElement('p');
+  const plants = forest.planted.filter(p => treeById(p.treeId));
+  const layout = layoutSpots(plants);
+  world.style.width = layout.width + 'px';
+  world.dataset.viewW = String(layout.measured);
+  const justId = scrollGrove && plants.length ? plants[plants.length - 1].id : '';
+  world.appendChild(buildIsland(layout.width, GROVE_H, layout.spots.map(s => s.x), !plants.length));
+  if (!plants.length) {
+    const empty = document.createElement('div');
     empty.className = 'grove-empty';
-    empty.textContent = '草地还空着';
+    const note = document.createElement('p');
+    note.textContent = '完成一件事，这里会长出第一棵树。';
+    empty.appendChild(note);
     world.appendChild(empty);
   }
-  forest.planted.forEach((p, i) => {
+  plants.forEach((p, i) => {
     const spec = treeById(p.treeId);
-    if (!spec) return;
-    const node = document.createElement('div');
+    const spot = layout.spots[i];
+    const node = document.createElement('button');
+    node.type = 'button';
     node.className = 'grove-tree tier-' + spec.tier;
-    const row = i % rows;
-    const col = Math.floor(i / rows);
-    const d = depth[row];
-    const jitter = p.jitter || 0;
-    const s = d.scale * (0.94 + (Math.abs(jitter) % 5) * 0.025);
-    node.style.left = (10 + col * spacing + jitter * 0.35 + row * 14) + 'px';
-    node.style.bottom = (d.bottom + (p.y || 0) * 0.35) + 'px';
-    node.style.zIndex = String(row * 30 + col);
-    node.style.transform = 'scale(' + (p.flip ? -s : s) + ', ' + s + ')';
-    node.appendChild(renderTreeSvg(spec));
+    node.dataset.pid = p.id;
+    node.setAttribute('aria-label', spec.name + '，' + (window.EUREKA_TIER_NAME[spec.tier] || '') + '，' + (window.EUREKA_STYLE_NAME[spec.style] || ''));
+    node.style.left = (spot.x - 37) + 'px';
+    node.style.bottom = spot.bottom + 'px';
+    node.style.zIndex = String(spot.z);
+    node.style.transform = 'scale(' + (spot.flip ? -spot.scale : spot.scale) + ',' + spot.scale + ')';
+    if (p.id === justId && !reduceMotion()) node.classList.add('just-planted');
+    const pit = document.createElement('i');
+    pit.className = 'pit';
+    pit.setAttribute('aria-hidden', 'true');
+    const sway = document.createElement('span');
+    sway.className = 'sway';
+    sway.appendChild(renderTreeSvg(spec));
+    node.appendChild(pit);
+    node.appendChild(sway);
     world.appendChild(node);
   });
   if (scrollGrove) {
     scrollGrove = false;
-    requestAnimationFrame(() => { $('grove').scrollLeft = $('grove').scrollWidth; });
+    requestAnimationFrame(() => {
+      const grove = $('grove');
+      const last = world.querySelector('.grove-tree:last-of-type');
+      if (!last) return;
+      grove.scrollLeft = Math.max(0, last.offsetLeft - grove.clientWidth * 0.45);
+    });
   }
 }
 function renderCodex() {
@@ -266,6 +468,10 @@ function renderCodex() {
   forest.planted.forEach(p => { owned[p.treeId] = (owned[p.treeId] || 0) + 1; });
   const found = Object.keys(owned).length;
   $('codexNote').textContent = '已发现 ' + found + '/30。普通 58% · 稀有 27% · 史诗 12% · 传说 3%。专注结束后，下一棵更容易出稀有。';
+  if ($('codexPageFrac')) {
+    $('codexPageFrac').textContent = found + '/30';
+    $('codexPageFill').style.width = (found / 30 * 100) + '%';
+  }
   const grid = $('codexGrid');
   grid.replaceChildren();
   TREES.forEach(tree => {
@@ -298,23 +504,79 @@ function closeReveal() {
   $('reveal').hidden = true;
   unlockBody();
 }
+function fillBurst(tier) {
+  const box = $('revealBurst');
+  if (!box) return;
+  box.replaceChildren();
+  if (tier !== 'epic' && tier !== 'legendary') return;
+  const n = tier === 'legendary' ? 16 : 11;
+  const gold = tier === 'legendary';
+  for (let i = 0; i < n; i++) {
+    const bit = document.createElement('i');
+    const ang = (i / n) * Math.PI * 2;
+    const dist = 36 + (i % 4) * 14;
+    bit.style.setProperty('--dx', (Math.cos(ang) * dist).toFixed(1) + 'px');
+    bit.style.setProperty('--dy', (Math.sin(ang) * dist * 0.7).toFixed(1) + 'px');
+    bit.style.background = gold ? (i % 3 === 0 ? '#fffaf0' : '#f0d060') : (i % 2 ? '#fff' : '#e7d0f6');
+    bit.style.animationDelay = (1.12 + (i % 5) * 0.035) + 's';
+    if (i % 3 === 0) bit.style.borderRadius = '1px';
+    box.appendChild(bit);
+  }
+}
 function openReveal(info) {
   if (!info || !info.tree) return;
   const tree = info.tree;
   const card = $('revealCard');
-  card.className = 'reveal-card tier-' + tree.tier;
-  const rare = tree.tier === 'epic' || tree.tier === 'legendary';
+  const ceremony = !reduceMotion();
+  const epic = tree.tier === 'epic' || tree.tier === 'legendary';
+  card.className = 'reveal-card tier-' + tree.tier + (ceremony ? ' is-ceremony' : '') + (epic && ceremony ? ' has-burst' : '');
   $('revealKicker').textContent = (info.boosted ? '专注加成 · ' : '') + (tree.tier === 'common' ? '种下了一棵树' : '新的树！');
   const art = $('revealArt');
   art.replaceChildren(renderTreeSvg(tree));
+  fillBurst(tree.tier);
   $('revealName').textContent = tree.name;
   $('revealMeta').textContent = (window.EUREKA_TIER_NAME[tree.tier] || '') + ' · ' + (window.EUREKA_STYLE_NAME[tree.style] || '');
   $('reveal').hidden = false;
   lockBody();
   clearTimeout(revealTimer);
-  if (!rare) revealTimer = setTimeout(closeReveal, tree.tier === 'rare' ? 2400 : 1700);
+  if (!epic) revealTimer = setTimeout(closeReveal, (tree.tier === 'rare' ? 2400 : 1700) + (ceremony ? 1100 : 0));
   if (tree.tier === 'legendary') vibrate([80, 40, 120]);
   else if (tree.tier !== 'common') vibrate(40);
+}
+function formatPlanted(at) {
+  const d = new Date(at);
+  if (!at || isNaN(d.getTime())) return '';
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日种下';
+}
+function openTreeCard(plantId) {
+  ensureForest();
+  const planted = forest.planted.find(p => p.id === plantId);
+  if (!planted) return;
+  const tree = treeById(planted.treeId);
+  if (!tree) return;
+  const owned = forest.planted.filter(p => p.treeId === tree.id).length;
+  const task = items.find(i => i && String(i.id) === String(planted.taskId));
+  $('treeSheet').className = 'tree-sheet tier-' + tree.tier;
+  $('treeSheetArt').replaceChildren(renderTreeSvg(tree));
+  const tier = $('treeSheetTier');
+  tier.className = 'tier tier-' + tree.tier;
+  tier.textContent = window.EUREKA_TIER_NAME[tree.tier] || tree.tier;
+  $('treeSheetStyle').textContent = window.EUREKA_STYLE_NAME[tree.style] || '';
+  $('treeSheetName').textContent = tree.name;
+  const bits = [];
+  if (task && textOf(task)) bits.push('来自「' + textOf(task) + '」');
+  const when = formatPlanted(planted.at);
+  if (when) bits.push(when);
+  bits.push('这种树有 ' + owned + ' 棵');
+  $('treeSheetFrom').textContent = bits.join(' · ');
+  $('treeCard').hidden = false;
+  lockBody();
+  $('treeSheetClose').focus();
+}
+function closeTreeCard() {
+  if ($('treeCard').hidden) return;
+  $('treeCard').hidden = true;
+  unlockBody();
 }
 function queueReveal(info) {
   if (!info) return;
@@ -438,6 +700,7 @@ function unlockBody() {
   if (!$('sheet').hidden && $('sheet').classList.contains('show')) return;
   if ($('codex') && !$('codex').hidden) return;
   if ($('reveal') && !$('reveal').hidden) return;
+  if ($('treeCard') && !$('treeCard').hidden) return;
   if (!locked) return;
   locked = false;
   document.body.classList.remove('lock');
@@ -456,6 +719,11 @@ function setView(next) {
     else b.removeAttribute('aria-current');
   });
   if (!locked) window.scrollTo(0, 0);
+  if (next === 'stats') {
+    const grove = $('grove');
+    const world = $('groveWorld');
+    if (grove && world && String(grove.clientWidth) !== (world.dataset.viewW || '')) renderGrove();
+  }
 }
 
 function choose() {
@@ -1100,6 +1368,7 @@ function bind() {
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     if (!$('reveal').hidden) { closeReveal(); return; }
+    if (!$('treeCard').hidden) { closeTreeCard(); return; }
     if (!$('codex').hidden) { closeCodex(); return; }
     if (!$('sheet').hidden && $('sheet').classList.contains('show')) { closeSheet(); return; }
     if ($('focus').classList.contains('show')) endFocus();
@@ -1168,15 +1437,27 @@ let groveMoved = false;
 let groveX = 0;
 $('grove').addEventListener('pointerdown', e => { groveX = e.clientX; groveMoved = false; });
 $('grove').addEventListener('pointermove', e => { if (Math.abs(e.clientX - groveX) > 8) groveMoved = true; });
-$('grove').addEventListener('click', () => { if (!groveMoved) openCodex(); });
-$('grove').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCodex(); } });
+$('grove').addEventListener('click', e => {
+  if (groveMoved) return;
+  const btn = e.target.closest('.grove-tree');
+  if (!btn) return;
+  openTreeCard(btn.dataset.pid);
+});
 $('openCodex').addEventListener('click', openCodex);
 $('closeCodex').addEventListener('click', closeCodex);
 $('revealOk').addEventListener('click', closeReveal);
 $('reveal').addEventListener('click', e => { if (e.target === $('reveal')) closeReveal(); });
+$('treeCardBack').addEventListener('click', closeTreeCard);
+$('treeSheetClose').addEventListener('click', closeTreeCard);
 migrateForest();
 bind();
 render();
+window.addEventListener('resize', () => {
+  if (view !== 'stats' || locked) return;
+  const grove = $('grove');
+  const world = $('groveWorld');
+  if (grove && world && String(grove.clientWidth) !== (world.dataset.viewW || '')) renderGrove();
+});
 if ('serviceWorker' in navigator && location.search.indexOf('nosw=1') === -1) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
