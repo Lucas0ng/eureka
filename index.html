@@ -3,277 +3,217 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#4f46e5">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F2EFE8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E0E0C" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Eureka！">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
 <title>Eureka！灵感记事本</title>
-<style>
-:root{--bg:#f6f7fb;--card:#fff;--ink:#1f2330;--mute:#7a8094;--now:#f97316;--long:#4f46e5;--line:#e6e8f0}
-@media (prefers-color-scheme:dark){:root{--bg:#14161d;--card:#1e212b;--ink:#eceef5;--mute:#8d93a8;--line:#2c303c}}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);padding:env(safe-area-inset-top) 0 calc(80px + env(safe-area-inset-bottom))}
-header{padding:18px 18px 6px}
-h1{margin:0;font-size:24px}
-.sub{color:var(--mute);font-size:13px;margin-top:2px}
-.card{background:var(--card);border-radius:16px;margin:12px 14px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-#pick .label{font-size:12px;color:var(--mute)}
-#pick .text{font-size:18px;font-weight:600;margin:6px 0 12px;word-break:break-word}
-.row{display:flex;gap:8px;flex-wrap:wrap}
-button{border:0;border-radius:12px;padding:10px 14px;font-size:15px;font-weight:600;cursor:pointer;background:var(--line);color:var(--ink)}
-.b-now{background:var(--now);color:#fff}.b-long{background:var(--long);color:#fff}
-textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:16px;background:transparent;color:var(--ink);resize:none;font-family:inherit}
-.add .row{margin-top:10px}.add .row button{flex:1}
-.tabs{display:flex;margin:4px 14px 0;gap:8px}
-.tab{flex:1;white-space:nowrap;font-size:14px;padding-left:4px;padding-right:4px;background:var(--card);color:var(--mute)}
-.tab.on.hist{background:#16a34a;color:#fff}.day{margin:14px 4px 6px;font-size:13px;color:var(--mute);font-weight:600}
-.tab.on.now{background:var(--now);color:#fff}.tab.on.long{background:var(--long);color:#fff}
-ul{list-style:none;margin:0;padding:0}
-li{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line)}
-li:last-child{border-bottom:0}
-li .t{flex:1;word-break:break-word}
-li.done .t{text-decoration:line-through;color:var(--mute)}li.done .tag{display:inline-block;text-decoration:none}
-.chk{width:24px;height:24px;border-radius:50%;border:2px solid var(--mute);flex:none;padding:0;background:transparent}
-li.done .chk{background:var(--mute)}
-.mini{padding:6px 9px;font-size:13px;font-weight:500}
-.empty{color:var(--mute);text-align:center;padding:18px 0;font-size:14px}
-#focus{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;z-index:9}
-#focus.show{display:flex}
-#focus .ft{font-size:24px;font-weight:700;margin-bottom:28px;word-break:break-word}
-#timer{font-size:64px;font-variant-numeric:tabular-nums;font-weight:700;margin-bottom:26px}
-#focus .row{justify-content:center}
-.hint{color:var(--mute);font-size:13px;margin-top:22px}
-.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;opacity:0;transition:.3s;pointer-events:none}
-.toast.show{opacity:.92}
-.stats .top{display:flex;justify-content:space-between;align-items:baseline}
-.lv{font-size:20px;font-weight:700}.pts{color:var(--mute);font-size:13px}
-.bar{height:10px;background:var(--line);border-radius:6px;margin:10px 0 4px;overflow:hidden}
-.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--now),var(--long));border-radius:6px;transition:width .5s}
-.nums{display:flex;gap:8px;margin:12px 0}
-.nums div{flex:1;background:var(--bg);border-radius:12px;padding:8px;text-align:center}
-.nums b{display:block;font-size:20px}.nums span{font-size:12px;color:var(--mute)}
-.week{display:flex;align-items:flex-end;gap:6px;height:70px;margin-top:6px}
-.week div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--mute)}
-.week i{width:100%;background:var(--long);border-radius:5px 5px 0 0;min-height:3px;margin-bottom:3px}
-.week .today i{background:var(--now)}
-.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.badge{font-size:12px;padding:5px 9px;border-radius:20px;background:var(--bg);color:var(--mute);opacity:.5}
-.badge.got{opacity:1;color:var(--ink);background:#fde68a55}
-.chips{display:flex;gap:6px;margin-top:8px}.chip{padding:5px 10px;font-size:13px;font-weight:500;border-radius:20px}
-.chip.on{background:var(--ink);color:var(--bg)}
-.tag{font-size:11px;color:var(--mute);background:var(--bg);border-radius:8px;padding:2px 6px;margin-left:4px;white-space:nowrap}
-#plant{font-size:72px;margin-bottom:8px;transition:transform .4s}
-.lens{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
-.garden{font-size:20px;letter-spacing:2px;word-break:break-all;margin-top:8px}
-.foot{display:flex;gap:8px;justify-content:center;margin:6px 14px}.foot button{font-size:13px;font-weight:500;background:transparent;color:var(--mute)}
-.conf{position:fixed;top:-20px;font-size:22px;z-index:20;pointer-events:none;animation:fall 1.6s ease-in forwards}
-@keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.3}}
-.toast button{margin-left:10px;padding:4px 10px;font-size:13px;background:#fff;color:#222}
-.toast.act{pointer-events:auto}
-</style>
+<style>html{background:#F2EFE8} @media (prefers-color-scheme:dark){html{background:#0E0E0C}}</style>
+<link rel="stylesheet" href="css/app.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+<link rel="apple-touch-startup-image" href="splash/iphone-se-light.png" media="(prefers-color-scheme: light) and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-se-dark.png" media="(prefers-color-scheme: dark) and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-x-light.png" media="(prefers-color-scheme: light) and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-x-dark.png" media="(prefers-color-scheme: dark) and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-11-light.png" media="(prefers-color-scheme: light) and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-11-dark.png" media="(prefers-color-scheme: dark) and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-13-light.png" media="(prefers-color-scheme: light) and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-13-dark.png" media="(prefers-color-scheme: dark) and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-14-pro-light.png" media="(prefers-color-scheme: light) and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-14-pro-dark.png" media="(prefers-color-scheme: dark) and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-14-plus-light.png" media="(prefers-color-scheme: light) and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-14-plus-dark.png" media="(prefers-color-scheme: dark) and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-14-pm-light.png" media="(prefers-color-scheme: light) and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-14-pm-dark.png" media="(prefers-color-scheme: dark) and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-16-pro-light.png" media="(prefers-color-scheme: light) and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-16-pro-dark.png" media="(prefers-color-scheme: dark) and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-16-pm-light.png" media="(prefers-color-scheme: light) and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-16-pm-dark.png" media="(prefers-color-scheme: dark) and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
 </head>
 <body>
-<header><h1>Eureka！💡</h1><div class="sub">冒出念头先记下，再回到手头的事</div></header>
+<main id="viewHome">
+  <header class="page-head">
+    <div>
+      <h1>Eureka！</h1>
+      <p id="homeSub" class="sub"></p>
+    </div>
+    <button type="button" id="pill" class="pill" aria-label="查看进度"></button>
+  </header>
 
-<div class="card" id="pick">
-  <div class="label">现在可以做这个 👇</div>
-  <div class="text" id="pickText"></div>
-  <div class="row">
-    <button class="b-now" id="pickFocus">现在只做这一件</button>
-    <button id="pickShuffle">🎲 换一件</button>
+  <section class="card hero" id="pick">
+    <div class="hero-top" id="heroTop">
+      <p class="kicker">现在可以做这个</p>
+      <button type="button" id="pickShuffle" class="text-btn">换一件</button>
+    </div>
+    <div id="pickBody">
+      <h2 id="pickText"></h2>
+      <p id="pickMeta" class="meta"></p>
+      <button type="button" id="pickFocus" class="btn primary block">现在只做这一件</button>
+      <button type="button" id="pickSplit" class="btn soft block">拆成 5 分钟</button>
+    </div>
+    <div id="pickEmpty" hidden>
+      <p class="kicker">从一件小事开始</p>
+      <h2>还没有要做的事</h2>
+      <p class="meta">写在下面。选立刻去做，或先放进长期。</p>
+    </div>
+  </section>
+
+  <section class="card composer">
+    <label class="sr" for="input">记下念头</label>
+    <textarea id="input" rows="2" placeholder="突然想做什么？写下来……" enterkeyhint="done"></textarea>
+    <div class="ests" id="ests" role="group" aria-label="大概需要多久">
+      <button type="button" data-m="5" aria-pressed="false">5 分钟</button>
+      <button type="button" data-m="30" aria-pressed="false">30 分钟</button>
+      <button type="button" data-m="60" aria-pressed="false">1 小时+</button>
+    </div>
+    <div class="pair">
+      <button type="button" class="btn now" data-add="now">立刻去做</button>
+      <button type="button" class="btn long" data-add="long">长期想做</button>
+    </div>
+    <p class="caption">回车保存。选了 1 小时以上，会放进长期。</p>
+  </section>
+
+  <div class="seg" id="segs" role="tablist" aria-label="清单">
+    <button type="button" class="on" data-tab="now" role="tab" aria-selected="true">立刻去做</button>
+    <button type="button" data-tab="long" role="tab" aria-selected="false">长期想做</button>
+    <button type="button" data-tab="hist" role="tab" aria-selected="false">已完成</button>
   </div>
-</div>
+  <section class="card list-card" aria-label="清单">
+    <ul id="list"></ul>
+  </section>
+</main>
 
-<div class="card add">
-  <textarea id="input" rows="2" placeholder="突然想做什么？写下来……"></textarea>
-  <div class="chips" id="chips"><button class="chip" data-m="5">⏱ 5分钟</button><button class="chip" data-m="30">30分钟</button><button class="chip" data-m="60">1小时+</button></div>
-  <div class="row">
-    <button class="b-now" data-add="now">⚡ 立刻去做</button>
-    <button class="b-long" data-add="long">🌱 长期想做</button>
-  </div>
-</div>
-
-<div class="card stats">
-  <div class="top"><div class="lv" id="lv"></div><div class="pts" id="pts"></div></div>
-  <div class="bar"><i id="barFill"></i></div>
-  <div class="pts" id="toNext"></div>
-  <div class="nums">
+<main id="viewStats" hidden>
+  <header class="page-head">
+    <div>
+      <h1>进度</h1>
+      <p class="sub">做完会留下来。断了一天，也没关系。</p>
+    </div>
+  </header>
+  <section class="card level-card">
+    <div class="level-top">
+      <h2 id="lv"></h2>
+      <p id="pts" class="pts"></p>
+    </div>
+    <div class="level-bar" aria-hidden="true"><i id="barFill"></i></div>
+    <p id="toNext" class="meta"></p>
+  </section>
+  <section class="metrics" aria-label="统计">
     <div><b id="nToday">0</b><span>今天完成</span></div>
-    <div><b id="nStreak">0</b><span>连续天数🔥</span></div>
-    <div><b id="nFocus">0</b><span>专注次数⏱</span></div>
+    <div><b id="nStreak">0</b><span>连续天数</span></div>
+    <div><b id="nFocus">0</b><span>专注次数</span></div>
+  </section>
+  <section class="card">
+    <h2 class="card-title">最近 7 天</h2>
+    <div class="week" id="week"></div>
+  </section>
+  <section class="card">
+    <h2 class="card-title">专注森林</h2>
+    <p class="meta" id="forestNote"></p>
+    <div class="forest" id="garden"></div>
+  </section>
+  <section class="card">
+    <h2 class="card-title">徽章</h2>
+    <div class="badges" id="badges"></div>
+  </section>
+  <section class="card backup">
+    <h2 class="card-title">数据</h2>
+    <p class="meta">备份是一个文件。换手机时可以恢复，以前导出的备份也能用。</p>
+    <div class="pair">
+      <button type="button" id="exp" class="btn soft">备份数据</button>
+      <button type="button" id="imp" class="btn soft">恢复备份</button>
+    </div>
+    <input type="file" id="impF" accept="application/json,.json" hidden>
+  </section>
+</main>
+
+<nav class="tabbar" aria-label="视图">
+  <button type="button" data-view="home" class="on" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.8 12 4l8 6.8V20a1 1 0 0 1-1 1h-5.2v-5.6h-3.6V21H5a1 1 0 0 1-1-1v-9.2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+    <span>今天</span>
+  </button>
+  <button type="button" data-view="stats">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M12 19V5M19 19v-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    <span>进度</span>
+  </button>
+</nav>
+
+<section id="focus" class="focus" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="fText">
+  <header class="focus-top">
+    <button type="button" id="fExit" class="text-btn">先放下</button>
+    <p id="fKicker" class="focus-kicker">专注</p>
+  </header>
+  <div class="focus-stage">
+    <div class="grow">
+      <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="ring-track" cx="50" cy="50" r="46"></circle>
+        <circle id="ring" class="ring-val" cx="50" cy="50" r="46"></circle>
+      </svg>
+      <div class="tree-slot" id="plantSlot"></div>
+    </div>
+    <h2 id="fText" class="f-title"></h2>
+    <p id="fQuestion" class="question" hidden>继续这件，还是换一件？</p>
+    <div id="timer" class="timer">25:00</div>
+    <p id="fReward" class="reward" hidden></p>
+    <div id="lens" class="lens" role="group" aria-label="专注多久">
+      <button type="button" data-l="5" aria-pressed="false">5 分钟</button>
+      <button type="button" data-l="15" aria-pressed="false">15 分钟</button>
+      <button type="button" data-l="25" aria-pressed="true" class="on">25 分钟</button>
+    </div>
   </div>
-  <div class="pts">我的专注森林（每专注完成一次长一棵）</div>
-  <div class="garden" id="garden"></div>
-  <div class="pts" style="margin-top:10px">最近 7 天完成数</div>
-  <div class="week" id="week"></div>
-  <div class="badges" id="badges"></div>
+  <footer class="focus-dock">
+    <p id="fHint" class="focus-hint"></p>
+    <div id="runBlock" class="dock-block">
+      <button type="button" id="fPrimary" class="btn primary block">开始</button>
+      <button type="button" id="fDone" class="btn soft block">做完了</button>
+    </div>
+    <div id="askBlock" class="dock-block" hidden>
+      <button type="button" id="fCont" class="btn primary block">继续这件</button>
+      <button type="button" id="fSwap" class="btn soft block">换一件</button>
+    </div>
+  </footer>
+</section>
+
+<div id="sheet" class="sheet-root" hidden>
+  <div class="backdrop" id="sheetBackdrop"></div>
+  <div class="sheet" id="sheetPanel" role="dialog" aria-modal="true"></div>
 </div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<div class="tabs">
-  <button class="tab now on" data-tab="now">⚡ 立刻去做 <span id="cNow"></span></button>
-  <button class="tab long" data-tab="long">🌱 长期想做 <span id="cLong"></span></button>
-  <button class="tab hist" data-tab="hist">✅ 已完成 <span id="cHist"></span></button>
-</div>
-<div class="card"><ul id="list"></ul></div>
-
-<div class="foot"><button id="exp">⬇️ 备份数据</button><button id="imp">⬆️ 恢复备份</button><input type="file" id="impF" accept=".json" hidden></div>
-<div id="focus">
-  <div id="plant">🌱</div>
-  <div class="ft" id="fText"></div>
-  <div class="lens" id="lens"><button class="chip" data-l="5">5 分钟</button><button class="chip" data-l="15">15 分钟</button><button class="chip on" data-l="25">25 分钟</button></div>
-  <div id="timer">25:00</div>
-  <div class="row">
-    <button class="b-now" id="fStart">开始</button>
-    <button id="fDone">✅ 做完了</button>
-    <button class="b-long" id="fBreak" style="display:none">☕ 休息 5 分钟</button>
-    <button class="b-now" id="fCont" style="display:none">继续这件</button>
-    <button class="b-long" id="fSwap" style="display:none">换一件</button>
-    <button id="fExit">先放下</button>
-  </div>
-  <div class="hint" id="fHint">专心做这一件，小苗会慢慢长成树。中途离开这个页面，小树会枯掉哦。想到别的事？先放下，回头再记。</div>
-</div>
-<div class="toast" id="toast"></div>
-
-<script>
-const KEY='eureka-items-v1';
-let items=JSON.parse(localStorage.getItem(KEY)||'[]');
-let tab='now', pickId=null, focusId=null, tick=null, left=25*60;
-const $=id=>document.getElementById(id);
-const save=()=>localStorage.setItem(KEY,JSON.stringify(items));
-const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function toast(m){const t=$('toast');t.textContent=m;t.classList.remove('act');t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1600)}
-function toastAct(m,fn){const t=$('toast');t.innerHTML=esc(m)+' <button>撤销</button>';t.classList.add('show','act');
-  t.querySelector('button').onclick=()=>{fn();t.classList.remove('show','act')};clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show','act'),4000)}
-function confetti(){const e=['🎉','✨','⭐','💡','🌟'];for(let i=0;i<24;i++){const c=document.createElement('div');c.className='conf';
-  c.textContent=e[i%e.length];c.style.left=Math.random()*100+'vw';c.style.animationDelay=Math.random()*.5+'s';document.body.appendChild(c);setTimeout(()=>c.remove(),2300)}}
-function open(cat){return items.filter(i=>!i.done&&(!cat||i.cat===cat))}
-function choose(){
-  const pool=open('now').length?open('now'):open('long');
-  const others=pool.filter(i=>i.id!==pickId);
-  const p=(others.length?others:pool)[Math.floor(Math.random()*(others.length||pool.length))];
-  pickId=p?p.id:null;
-}
-
-const SK='eureka-stats-v1';
-let st=JSON.parse(localStorage.getItem(SK)||'{"pts":0,"days":{},"focus":0}');
-const saveS=()=>localStorage.setItem(SK,JSON.stringify(st));
-const dkey=d=>{d=d||new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};
-const LV=['🌱 新芽','🌿 小苗','🌳 小树','⭐ 行动派','🔥 专注达人','🚀 执行王','👑 Eureka 大师'];
-function level(p){let l=0,need=50,acc=0;while(p>=acc+need){acc+=need;l++;need=Math.round(need*1.5)}return{l,acc,need}}
-function streak(){let n=0,d=new Date();if(!st.days[dkey(d)])d.setDate(d.getDate()-1);while(st.days[dkey(d)]){n++;d.setDate(d.getDate()-1)}return n}
-function award(n,why){const before=level(st.pts).l;st.pts=Math.max(0,st.pts+n);
-  if(n>0){const k=dkey();st.days[k]=(st.days[k]||0)+1}
-  saveS();const after=level(st.pts).l;
-  if(after>before){toast('升级了！'+LV[Math.min(after,LV.length-1)]+' 🎉');if(navigator.vibrate)navigator.vibrate(200)}
-  else if(n>0)toast('+'+n+' 分 '+why)}
-function unaward(n){st.pts=Math.max(0,st.pts-n);const k=dkey();if(st.days[k])st.days[k]--;saveS()}
-function renderStats(){const L=level(st.pts);
-  $('lv').textContent='Lv.'+(L.l+1)+' '+LV[Math.min(L.l,LV.length-1)];
-  $('pts').textContent=st.pts+' 分';
-  $('barFill').style.width=((st.pts-L.acc)/L.need*100)+'%';
-  $('toNext').textContent='再得 '+(L.acc+L.need-st.pts)+' 分升级';
-  $('nToday').textContent=st.days[dkey()]||0;$('nStreak').textContent=streak();$('nFocus').textContent=st.focus;$('garden').textContent=st.focus?'🌳'.repeat(Math.min(st.focus,60))+(st.wilt?' 🥀'.repeat(Math.min(st.wilt,10)):''):'还没有树，去专注一次吧 🌱';
-  const w=[],d=new Date();d.setDate(d.getDate()-6);let mx=1;
-  for(let i=0;i<7;i++){const k=dkey(d),v=st.days[k]||0;mx=Math.max(mx,v);w.push([k,v,'日一二三四五六'[d.getDay()],i===6]);d.setDate(d.getDate()+1)}
-  $('week').innerHTML=w.map(([k,v,n,t])=>`<div class="${t?'today':''}">${v||''}<i style="height:${v/mx*50}px"></i>${n}</div>`).join('');
-  const done=items.filter(i=>i.done).length,dl=items.filter(i=>i.done&&i.cat==='long').length;
-  const B=[['✍️ 第一条念头',items.length>=1],['✅ 完成第一件',done>=1],['🔟 完成 10 件',done>=10],['🌳 完成长期目标',dl>=1],
-    ['⏱ 第一次专注',st.focus>=1],['🧘 专注 10 次',st.focus>=10],['🔥 连续 3 天',streak()>=3],['🏆 连续 7 天',streak()>=7]];
-  $('badges').innerHTML=B.map(([n,g])=>`<span class="badge ${g?'got':''}">${n}</span>`).join('')}
-function render(){renderStats();
-  if(!items.find(i=>i.id===pickId&&!i.done))choose();
-  const p=items.find(i=>i.id===pickId);
-  $('pickText').textContent=p?p.text:'还没有要做的事，先在下面记一件吧 ✍️';
-  $('pickFocus').style.display=$('pickShuffle').style.display=p?'':'none';
-  $('cNow').textContent=open('now').length||'';
-  $('cLong').textContent=open('long').length||'';
-  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
-  const dn=items.filter(i=>i.done);$('cHist').textContent=dn.length||'';
-  if(tab==='hist'){const pad=n=>String(n).padStart(2,'0'),dk=d=>{const x=new Date(d);return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate())};
-    const td=dk(Date.now()),yd=dk(Date.now()-864e5);let last='',h='';
-    dn.sort((a,b)=>(b.dt||0)-(a.dt||0)).forEach(i=>{const d=i.dt||0,k=i.dt?dk(d):'old';
-      if(k!==last){last=k;const c=dn.filter(j=>(j.dt?dk(j.dt):'old')===k).length;h+=`<div class="day">${k==='old'?'更早':k===td?'今天':k===yd?'昨天':k.slice(5).replace('-','月')+'日'} · 完成 ${c} 件</div>`}
-      const x=new Date(d);h+=`<li class="done" data-id="${i.id}"><button class="chk" data-act="toggle" aria-label="恢复"></button>
-      <span class="t">${esc(i.text)}<span class="tag">${i.cat==='long'?'🌱 长期':'⚡ 立刻'}${i.dt?' · '+pad(x.getHours())+':'+pad(x.getMinutes()):''}</span></span>
-      <button class="mini" data-act="del">✕</button></li>`});
-    $('list').innerHTML=h||'<div class="empty">还没有完成的事，做完一件就会出现在这里 ✨</div>';return}
-  const list=items.filter(i=>i.cat===tab&&!i.done).sort((a,b)=>b.t-a.t);
-  $('list').innerHTML=list.length?list.map(i=>`<li class="${i.done?'done':''}" data-id="${i.id}">
-    <button class="chk" data-act="toggle" aria-label="完成"></button>
-    <span class="t">${esc(i.text)}${i.m?`<span class="tag">${i.m>=60?'1小时+':i.m+'分钟'}</span>`:''}</span>
-    ${i.done?'':`<button class="mini" data-act="focus">专注</button>${i.cat==='long'?'<button class="mini" data-act="split">拆小步</button>':''}<button class="mini" data-act="move">${i.cat==='now'?'→长期':'→立刻'}</button>`}
-    <button class="mini" data-act="del">✕</button></li>`).join(''):`<div class="empty">${tab==='now'?'没有立刻要做的事':'还没有长期想做的事'}</div>`;
-}
-document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{
-  const v=$('input').value.trim(); if(!v){$('input').focus();return}
-  items.push({id:Date.now()+''+Math.random(),text:v,cat:b.dataset.add,done:false,t:Date.now(),m:selM});selM=0;document.querySelectorAll('.chip[data-m]').forEach(c=>c.classList.remove('on'));
-  save();$('input').value='';tab=b.dataset.add;render();
-  toast(b.dataset.add==='now'?'记下了，回去继续手上的事吧':'放进长期清单了');
-});
-let selM=0;
-document.querySelectorAll('.chip[data-m]').forEach(c=>c.onclick=()=>{selM=selM==+c.dataset.m?0:+c.dataset.m;
-  document.querySelectorAll('.chip[data-m]').forEach(x=>x.classList.toggle('on',+x.dataset.m===selM))});
-$('input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();
-  document.querySelector(`[data-add="${selM>=60?'long':'now'}"]`).click()}});
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
-$('list').onclick=e=>{
-  const a=e.target.dataset.act;if(!a)return;
-  const id=e.target.closest('li').dataset.id, it=items.find(i=>i.id===id);
-  if(a==='toggle'){it.done=!it.done;it.dt=it.done?Date.now():0;if(!it.done)toast('已恢复到「'+(it.cat==='long'?'长期想做':'立刻去做')+'」');const v=it.cat==='long'?30:10;if(it.done){award(v,it.cat==='long'?'长期目标达成！':'');confetti()}else unaward(v)}
-  if(a==='move')it.cat=it.cat==='now'?'long':'now';
-  if(a==='del'){const idx=items.indexOf(it);items.splice(idx,1);save();render();
-    toastAct('已删除',()=>{items.splice(idx,0,it);save();render()});return}
-  if(a==='split'){const st1=prompt('把「'+it.text+'」拆成一个 5 分钟就能开始的第一步：','');
-    if(st1&&st1.trim()){items.push({id:Date.now()+''+Math.random(),text:st1.trim()+'（'+it.text+'）',cat:'now',done:false,t:Date.now(),m:5});
-      save();tab='now';render();toast('第一步放进「立刻去做」了 👣')}return}
-  if(a==='focus'){startFocus(id);return}
-  save();render();
-};
-$('pickShuffle').onclick=()=>{choose();render()};
-$('pickFocus').onclick=()=>pickId&&startFocus(pickId);
-function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
-let len=25,endAt=0,mode='focus';
-const HINT='专心做这一件，小苗会慢慢长成树。中途离开这个页面，小树会枯掉哦。想到别的事？先放下，回头再记。';
-function ui(m){mode=m;const show=(id,v)=>$(id).style.display=v?'':'none';
-  show('fStart',m==='focus'||m==='break');show('fDone',m!=='break');show('fBreak',m==='done');show('fCont',m==='ask');show('fSwap',m==='ask');
-  $('lens').style.display=m==='focus'?'':'none';$('fHint').textContent=m==='break'?'起来走走、喝口水、看看远处。休息时离开页面没关系。':m==='ask'?'休息好了！接着做这件，还是换一件？':m==='done'?'这一轮完成啦，先休息一下吧。':HINT}
-const PL=['🌱','🌿','🪴','🌳'];
-function plant(){const f=1-left/(len*60);$('plant').textContent=PL[Math.min(3,Math.floor(f*4))];}
-function stopTick(){clearInterval(tick);tick=null}
-function startFocus(id){focusId=id;stopTick();left=len*60;
-  $('fText').textContent=items.find(i=>i.id===id).text;$('timer').textContent=fmt(left);$('plant').textContent='🌱';
-  $('fStart').textContent='开始';ui('focus');$('focus').classList.add('show')}
-function endFocus(){stopTick();$('focus').classList.remove('show');render()}
-document.querySelectorAll('.chip[data-l]').forEach(c=>c.onclick=()=>{if(tick||mode!=='focus')return;len=+c.dataset.l;left=len*60;
-  $('timer').textContent=fmt(left);document.querySelectorAll('.chip[data-l]').forEach(x=>x.classList.toggle('on',x===c))});
-function step(){left=Math.round((endAt-Date.now())/1000);$('timer').textContent=fmt(Math.max(left,0));
-  if(mode==='break'){if(left<=0){stopTick();ui('ask');$('plant').textContent='💪';$('timer').textContent='00:00';if(navigator.vibrate)navigator.vibrate([200,100,200]);toast('休息结束 💪')}return}
-  plant();
-  if(left<=0){stopTick();st.focus++;st.pts+=len>=25?15:len>=15?10:5;saveS();$('plant').textContent='🌳';
-    left=len*60;ui('done');confetti();
-    if(navigator.vibrate)navigator.vibrate([300,150,300]);toast('专注完成，种下一棵树 🌳 +'+(len>=25?15:len>=15?10:5)+' 分');renderStats()}}
-$('fStart').onclick=()=>{
-  if(tick){stopTick();$('fStart').textContent='继续';return}
-  $('fStart').textContent='暂停';$('lens').style.display='none';$('fDone').style.display=mode==='break'?'none':'';endAt=Date.now()+left*1000;tick=setInterval(step,500);
-};
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&tick&&mode==='focus'){stopTick();st.wilt=(st.wilt||0)+1;saveS();
-  left=len*60;$('timer').textContent=fmt(left);$('plant').textContent='🥀';$('fStart').textContent='重新开始';$('lens').style.display='';
-  setTimeout(()=>toast('刚才离开了，小树枯了 🥀 没关系，再来一次'),300)}});
-$('fDone').onclick=()=>{const it=items.find(i=>i.id===focusId);if(it&&!it.done){it.done=true;it.dt=Date.now();award(it.cat==='long'?30:10,'');confetti()}save();endFocus();setTimeout(()=>toast('太棒了，划掉一件 ✅'),1700)};
-$('fExit').onclick=endFocus;
-$('fBreak').onclick=()=>{ui('break');left=5*60;$('plant').textContent='☕';$('timer').textContent=fmt(left);$('fStart').textContent='暂停';
-  endAt=Date.now()+left*1000;stopTick();tick=setInterval(step,500);};
-$('fCont').onclick=()=>startFocus(focusId);
-$('fSwap').onclick=()=>{pickId=focusId;choose();render();if(pickId&&pickId!==focusId)startFocus(pickId);else{endFocus();toast('没有别的事了，去记一件吧')}};
-$('exp').onclick=()=>{const b=new Blob([JSON.stringify({items,st})],{type:'application/json'});const a=document.createElement('a');
-  a.href=URL.createObjectURL(b);a.download='eureka-backup-'+dkey()+'.json';a.click()};
-$('imp').onclick=()=>$('impF').click();
-$('impF').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{const d=JSON.parse(t);if(!confirm('用备份覆盖现在的数据？'))return;
-  items=d.items||[];st=d.st||st;save();saveS();render();toast('恢复好了')}catch(_){toast('这个文件读不了')}})};
-render();
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
-</script>
+<template id="treeTpl">
+  <svg class="tree-svg" viewBox="0 0 120 150" aria-hidden="true">
+    <ellipse class="soil" cx="60" cy="132" rx="34" ry="7"></ellipse>
+    <g class="stage stage-seed">
+      <ellipse class="trunk" cx="60" cy="124" rx="7" ry="4.5"></ellipse>
+    </g>
+    <g class="stage stage-sprout">
+      <path class="stem" d="M60 130 C61 116 59 104 60 92"></path>
+      <path class="leaf" d="M60 108 C44 104 34 90 42 80 C52 90 58 100 60 108Z"></path>
+      <path class="leaf-2" d="M60 98 C78 92 90 78 80 68 C70 80 64 92 60 98Z"></path>
+    </g>
+    <g class="stage stage-sapling">
+      <path class="trunk" d="M56.5 134 L58 98 Q60 90 62 98 L63.5 134Z"></path>
+      <circle class="leaf-2" cx="44" cy="92" r="14"></circle>
+      <circle class="leaf" cx="76" cy="90" r="15"></circle>
+      <circle class="leaf" cx="60" cy="74" r="18"></circle>
+    </g>
+    <g class="stage stage-tree">
+      <path class="trunk" d="M54 136 C55 114 56 98 58 84 L62 84 C64 98 65 114 66 136Z"></path>
+      <circle class="leaf-2" cx="38" cy="92" r="16"></circle>
+      <circle class="leaf" cx="84" cy="88" r="18"></circle>
+      <circle class="leaf-2" cx="58" cy="96" r="14"></circle>
+      <circle class="leaf" cx="60" cy="62" r="26"></circle>
+      <circle class="leaf" cx="42" cy="74" r="14"></circle>
+      <circle class="leaf-2" cx="80" cy="70" r="13"></circle>
+      <circle class="highlight" cx="50" cy="52" r="7"></circle>
+    </g>
+  </svg>
+</template>
+<script src="js/app.js"></script>
 </body>
 </html>
