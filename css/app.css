@@ -145,6 +145,9 @@ textarea { color: inherit; }
   color: var(--ink);
   flex: none;
   margin-bottom: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .card {
@@ -460,6 +463,7 @@ li.empty {
   line-height: 1.35;
   display: flex;
   align-items: center;
+  gap: 7px;
 }
 .badge.got { background: var(--gold); color: var(--gold-ink); }
 .backup .meta { margin-bottom: 14px; }
@@ -634,9 +638,18 @@ li.empty {
 .tree-svg .stem {
   fill: none;
   stroke: var(--trunk);
-  stroke-width: 2.6;
+  stroke-width: 3.2;
   stroke-linecap: round;
 }
+.ico-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.ico {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  vertical-align: -3px;
+  flex: none;
+}
+.pill .ico { width: 16px; height: 16px; vertical-align: 0; }
 .tree-svg .leaf { fill: var(--leaf); }
 .tree-svg .leaf-2 { fill: var(--leaf-2); }
 .tree-svg .highlight { fill: #fff; opacity: 0.28; }

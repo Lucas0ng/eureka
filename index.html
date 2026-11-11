@@ -14,7 +14,8 @@
 <style>html{background:#F2EFE8} @media (prefers-color-scheme:dark){html{background:#0E0E0C}}</style>
 <link rel="stylesheet" href="css/app.css">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
 <link rel="apple-touch-startup-image" href="splash/iphone-se-light.png" media="(prefers-color-scheme: light) and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="splash/iphone-se-dark.png" media="(prefers-color-scheme: dark) and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
@@ -185,32 +186,76 @@
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<svg class="ico-defs" width="0" height="0" aria-hidden="true">
+  <defs>
+    <symbol id="i-sprout" viewBox="0 0 24 24">
+      <rect x="11" y="11" width="2" height="10" rx="1" fill="currentColor"></rect>
+      <path fill="currentColor" d="M12 14C8 13.2 4.8 10.6 6 7.6 9.2 7.8 11.4 9.8 12 14z"></path>
+      <path fill="currentColor" d="M12 11c.2-4 2.6-6.6 6.2-6.4-1 3.2-3.4 5.4-6.2 6.4z"></path>
+    </symbol>
+    <symbol id="i-sapling" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 3 15.2 8H8.8L12 3zm0 4.2L17 14H7L12 7.2z"></path>
+      <rect x="10.8" y="13.2" width="2.4" height="6.4" rx="0.7" fill="currentColor"></rect>
+    </symbol>
+    <symbol id="i-tree" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 1.6 15.2 6.2H8.8L12 1.6zm0 3.8 5.6 6.6H6.4L12 5.4zm0 4.8 8.4 8H3.6l8.4-8z"></path>
+      <rect x="10.6" y="16.8" width="2.8" height="5" rx="0.7" fill="currentColor"></rect>
+    </symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 2.2 14.2 9.8 21.8 12 14.2 14.2 12 21.8 9.8 14.2 2.2 12 9.8 9.8Z"></path>
+    </symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 1.7c1.2 3.4 5 5.1 5 9.5 0 3.4-2.6 6-5 6s-5-2.6-5-6c0-2.4 1.2-4.1 2.5-5.8.8 1.9 2.1 2.8 3.3 2.8-.7-2.4-.6-4.8-.2-7 .1.1.4.2.8.3.2-.3.4-.5.6-.8Z"></path>
+    </symbol>
+    <symbol id="i-crown" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M3 16.6 6.1 9.2 9.4 13.1 12 6.4l2.6 6.7 3.3-3.9L21 16.6H3Zm1.3 1.3h15.4v2.3H4.3v-2.3Z"></path>
+    </symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 3.2 19.2 12h-4.4v8.6H9.2V12H4.8L12 3.2Z"></path>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path fill="currentColor" fill-rule="evenodd" d="M12 2.2a9.8 9.8 0 1 0 .02 19.6A9.8 9.8 0 0 0 12 2.2Zm-1.15 12.55-3.15-3.15 1.55-1.55 1.6 1.6 3.9-3.9 1.55 1.55-5.45 5.45Z"></path>
+    </symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24">
+      <circle cx="12" cy="13.2" r="6.6" fill="none" stroke="currentColor" stroke-width="2"></circle>
+      <path d="M12 13.2V8.6M9.4 3.7h5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </symbol>
+    <symbol id="i-timer-check" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" stroke-width="2"></circle>
+      <path d="M8.3 12.2 10.8 14.7 15.8 9.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+    </symbol>
+    <symbol id="i-ten" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M4.2 6.2h2.3v11.6H4.2V6.2Zm3.6 0h5.1c2.3 0 3.8 1.6 3.8 4.1 0 2.6-1.6 4.2-4 4.2H9.6v3.3H7.8V6.2Zm1.8 1.8v4.7h3c1.2 0 2-.7 2-2.3s-.8-2.4-2-2.4h-3Z"></path>
+    </symbol>
+    <symbol id="i-e" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M4.5 3.8h4.4v16.4H4.5V3.8Zm0 0h11.2v4.2H4.5V3.8Zm0 6.1h15v4.2h-15V9.9Zm0 6.1h11.2v4.2H4.5v-4.2Z"></path>
+    </symbol>
+  </defs>
+</svg>
 <template id="treeTpl">
-  <svg class="tree-svg" viewBox="0 0 120 150" aria-hidden="true">
-    <ellipse class="soil" cx="60" cy="132" rx="34" ry="7"></ellipse>
+  <svg class="tree-svg" viewBox="0 0 64 80" aria-hidden="true">
     <g class="stage stage-seed">
-      <ellipse class="trunk" cx="60" cy="124" rx="7" ry="4.5"></ellipse>
+      <ellipse class="soil" cx="32" cy="74" rx="14" ry="3"></ellipse>
+      <path class="trunk" d="M32 64c3.2 0 6 2.2 6 5.2S35.2 75 32 75s-6-2.4-6-5.8S28.8 64 32 64z"></path>
     </g>
     <g class="stage stage-sprout">
-      <path class="stem" d="M60 130 C61 116 59 104 60 92"></path>
-      <path class="leaf" d="M60 108 C44 104 34 90 42 80 C52 90 58 100 60 108Z"></path>
-      <path class="leaf-2" d="M60 98 C78 92 90 78 80 68 C70 80 64 92 60 98Z"></path>
+      <ellipse class="soil" cx="32" cy="74" rx="14" ry="3"></ellipse>
+      <path class="stem" d="M32 74 V46"></path>
+      <path class="leaf" d="M32 62C24 60 14 52 18 42c6 6 10 12 14 20z"></path>
+      <path class="leaf-2" d="M32 54c8-2 18-8 16-18-8 4-12 12-16 18z"></path>
     </g>
     <g class="stage stage-sapling">
-      <path class="trunk" d="M56.5 134 L58 98 Q60 90 62 98 L63.5 134Z"></path>
-      <circle class="leaf-2" cx="44" cy="92" r="14"></circle>
-      <circle class="leaf" cx="76" cy="90" r="15"></circle>
-      <circle class="leaf" cx="60" cy="74" r="18"></circle>
+      <ellipse class="soil" cx="32" cy="74" rx="14" ry="3"></ellipse>
+      <rect class="trunk" x="29.5" y="56" width="5" height="16" rx="1.4"></rect>
+      <path class="leaf" d="M32 38c7 5 14 12 12 20-7 2-19 2-24 0-2-8 5-15 12-20z"></path>
+      <path class="leaf-2" d="M32 24c5 4 10 10 8 16-5 2-13 2-16 0-2-6 3-12 8-16z"></path>
     </g>
     <g class="stage stage-tree">
-      <path class="trunk" d="M54 136 C55 114 56 98 58 84 L62 84 C64 98 65 114 66 136Z"></path>
-      <circle class="leaf-2" cx="38" cy="92" r="16"></circle>
-      <circle class="leaf" cx="84" cy="88" r="18"></circle>
-      <circle class="leaf-2" cx="58" cy="96" r="14"></circle>
-      <circle class="leaf" cx="60" cy="62" r="26"></circle>
-      <circle class="leaf" cx="42" cy="74" r="14"></circle>
-      <circle class="leaf-2" cx="80" cy="70" r="13"></circle>
-      <circle class="highlight" cx="50" cy="52" r="7"></circle>
+      <ellipse class="soil" cx="32" cy="74" rx="15" ry="3.1"></ellipse>
+      <rect class="trunk" x="29" y="56" width="6" height="16" rx="1.5"></rect>
+      <path class="leaf" d="M32 36c9 6 18 13 15 24-9 3-24 3-30 0C14 49 23 42 32 36z"></path>
+      <path class="leaf-2" d="M32 22c7 5 14 11 11 20-7 2-18 2-22 0-3-9 4-15 11-20z"></path>
+      <path class="leaf" d="M32 10c5 4 9 8 8 15-5 2-12 2-16 0-1-7 3-11 8-15z"></path>
     </g>
   </svg>
 </template>

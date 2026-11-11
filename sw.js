@@ -1,4 +1,4 @@
-const CACHE = 'eureka-v6';
+const CACHE = 'eureka-v7';
 const FILES = [
   './',
   'index.html',
@@ -6,6 +6,7 @@ const FILES = [
   'js/app.js',
   'manifest.json',
   'favicon-32.png',
+  'favicon.ico',
   'apple-touch-icon.png',
   'icon-192.png',
   'icon-512.png',
