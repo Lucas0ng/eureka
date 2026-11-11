@@ -1,9 +1,10 @@
-const CACHE = 'eureka-v7';
+const CACHE = 'eureka-v11';
 const FILES = [
   './',
   'index.html',
   'css/app.css',
   'js/app.js',
+  'js/trees.js',
   'manifest.json',
   'favicon-32.png',
   'favicon.ico',
