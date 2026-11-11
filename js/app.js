@@ -329,9 +329,8 @@ function renderGrove() {
   world.replaceChildren();
   const n = planted.length;
   const view = Math.max(280, ($('groveScroll') && $('groveScroll').clientWidth) || 320);
-  const per = Math.max(1, Math.ceil(n / 3));
-  const gap = n ? Math.min(64, Math.max(50, (view - 28) / per)) : 64;
-  const width = Math.max(view, Math.round(8 + (per - 1) * gap + 58));
+  const gap = n ? 68 : 80;
+  const width = Math.max(view, Math.round(n ? 28 + n * gap : view));
   world.style.width = width + 'px';
   world.appendChild(svgLayer(width, 'land'));
   if (!n) {
@@ -341,25 +340,23 @@ function renderGrove() {
     world.appendChild(invite);
   }
   const bands = [
-    { scale: 0.66, foot: 166 },
-    { scale: 0.82, foot: 112 },
-    { scale: 0.96, foot: 42 }
+    { scale: 0.66, foot: 84 },
+    { scale: 0.84, foot: 62 },
+    { scale: 1, foot: 48 }
   ];
   const bandOf = [0, 2, 1];
   planted.forEach((p, i) => {
     const spec = treeById(p.treeId);
     if (!spec) return;
     const band = bandOf[i % 3];
-    const col = Math.floor(i / 3);
     const b = bands[band];
-    const stagger = [0, gap * 0.46, gap * 0.16][band];
-    const s = b.scale * (0.94 + Math.min(0.12, Math.abs((p.scale || 1) - 0.9)));
+    const s = b.scale;
     const node = document.createElement('button');
     node.type = 'button';
     node.className = 'grove-tree tier-' + spec.tier + ' style-' + spec.style + ' d' + band + (p.id === justPlantedId ? ' is-new' : '');
-    node.style.left = Math.round(6 + col * gap + stagger + (p.jitter || 0) * 0.85) + 'px';
-    node.style.bottom = Math.round(b.foot + (p.y || 0) * 0.4) + 'px';
-    node.style.zIndex = String(6 + band * 8 + (col % 6));
+    node.style.left = Math.round(22 + i * gap + (p.jitter || 0) * 0.25) + 'px';
+    node.style.bottom = Math.round(b.foot) + 'px';
+    node.style.zIndex = String(6 + band * 8 + (i % 5));
     node.style.transform = 'scale(' + (p.flip ? -s : s) + ',' + s + ')';
     node.setAttribute('aria-label', spec.name);
     const grow = document.createElement('span');

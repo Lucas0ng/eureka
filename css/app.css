@@ -530,12 +530,12 @@ li.empty {
 .grove-scroll::-webkit-scrollbar { display: none; }
 .grove-world { position: relative; height: 100%; min-width: 100%; }
 .scenery { position: absolute; left: 0; top: 0; display: block; }
-.scenery.fore { z-index: 40; pointer-events: none; }
+.scenery.fore { z-index: 2; pointer-events: none; }
 
 .grove-tree {
   position: absolute;
-  width: 54px;
-  height: 72px;
+  width: 58px;
+  height: 76px;
   padding: 0;
   border: 0;
   margin: 0;
@@ -551,12 +551,13 @@ li.empty {
 }
 .grove-tree .shade {
   position: absolute;
-  left: 22%;
-  right: 22%;
-  bottom: 1px;
-  height: 8px;
+  left: 6%;
+  right: 6%;
+  bottom: -2px;
+  height: 9px;
   border-radius: 50%;
-  background: rgba(24, 48, 28, .28);
+  background: radial-gradient(ellipse at center, rgba(16, 32, 18, .55), rgba(16, 32, 18, 0) 70%);
+  z-index: 0;
 }
 .grove-tree .sway {
   position: absolute;
@@ -566,7 +567,7 @@ li.empty {
 }
 .grove-tree .sway svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .grove-tree.style-pixel .sway svg { image-rendering: pixelated; }
-.grove-tree.d0 { opacity: .9; }
+.grove-tree .sway { z-index: 1; }
 .grove-tree .grow::before {
   content: "";
   position: absolute;
